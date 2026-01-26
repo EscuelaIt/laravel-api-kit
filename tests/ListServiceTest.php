@@ -5,6 +5,7 @@ namespace EscuelaIT\Test;
 use EscuelaIT\Test\TestCase;
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\Test\Fixtures\Post;
+use EscuelaIT\Test\Fixtures\Comment;
 use EscuelaIT\Test\Filters\TitleContainsFilter;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -205,6 +206,51 @@ class ListServiceTest extends TestCase
   }
 
   #[Test]
+  public function it_includes_allowed_relations_when_requested()
+  {
+    $post = Post::factory()->create();
+    Comment::factory()->count(2)->create(['post_id' => $post->id]);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setAvailableIncludes(['comments'])
+      ->setSearchConfiguration([
+        'include' => 'comments',
+        'perPage' => 10,
+        'sortField' => 'id',
+      ]);
+
+    $results = $service->getResults();
+
+    $this->assertTrue(
+      $results['result']->every(fn($item) => $item->relationLoaded('comments'))
+    );
+    $this->assertEquals(2, $results['result'][0]->comments->count());
+  }
+
+  #[Test]
+  public function it_does_not_include_relations_not_in_availableIncludes()
+  {
+    $post = Post::factory()->create();
+    Comment::factory()->count(2)->create(['post_id' => $post->id]);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setAvailableIncludes(['other'])
+      ->setSearchConfiguration([
+        'include' => 'comments',
+        'perPage' => 10,
+        'sortField' => 'id',
+      ]);
+
+    $results = $service->getResults();
+
+    $this->assertTrue(
+      $results['result']->every(fn($item) => !$item->relationLoaded('comments'))
+    );
+  }
+
+  #[Test]
   public function it_applies_scope_via_belongsTo_and_relationId()
   {
     // Arrange: crear posts con IDs específicos
@@ -294,5 +340,51 @@ class ListServiceTest extends TestCase
     // Assert
     $this->assertEquals(5, $results['countItems']); // Todos los posts
     $this->assertCount(5, $results['result']);
+  }
+
+  #[Test]
+  public function it_limits_perPage_to_maxPerPage_when_requested_size_exceeds_limit()
+  {
+    // Arrange: crear 20 posts
+    Post::factory()->count(20)->create();
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setMaxPerPage(5)
+      ->setSearchConfiguration([
+        'perPage' => 100, // Solicitar 100 elementos
+        'sortField' => 'id',
+        'sortDirection' => 'asc',
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert
+    $this->assertEquals(20, $results['countItems']); // Total de posts
+    $this->assertCount(5, $results['result']); // Acotado a maxPerPage (5)
+  }
+
+  #[Test]
+  public function it_does_not_limit_perPage_when_requested_size_is_below_maxPerPage()
+  {
+    // Arrange: crear 20 posts
+    Post::factory()->count(20)->create();
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setMaxPerPage(10)
+      ->setSearchConfiguration([
+        'perPage' => 5, // Solicitar 5 elementos (menor que maxPerPage)
+        'sortField' => 'id',
+        'sortDirection' => 'asc',
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert
+    $this->assertEquals(20, $results['countItems']); // Total de posts
+    $this->assertCount(5, $results['result']); // Respeta el perPage solicitado
   }
 }

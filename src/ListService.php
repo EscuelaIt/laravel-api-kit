@@ -14,12 +14,15 @@ class ListService
     protected bool $paginated = true;
     protected ?array $availableFilterColumns = null;
     protected ?array $availableScopes = null;
+    protected ?array $availableIncludes = null;
+    protected ?int $maxPerPage = null;
     protected array $searchConfiguration = [
         'perPage' => 10,
         'sortField' => null,
         'sortDirection' => 'asc',
         'keyword' => null,
         'filters' => [],
+        'include' => [],
         'belongsTo' => null,
         'relationId' => null,
     ];
@@ -42,6 +45,18 @@ class ListService
         return $this;
     }
 
+    public function setAvailableIncludes(?array $includes): ListService
+    {
+        $this->availableIncludes = $includes;
+        return $this;
+    }
+
+    public function setMaxPerPage(?int $maxPerPage): ListService
+    {
+        $this->maxPerPage = $maxPerPage;
+        return $this;
+    }
+
     protected function createQuery()
     {
         if (empty($this->listModel)) {
@@ -54,9 +69,11 @@ class ListService
     {
         $this->query = $this->createQuery();
         $this->normalizeFilters();
+        $this->normalizeIncludes();
         $this->applyCustomFilters();
         $this->applySearchFilters();
         $this->applyBelongsTo();
+        $this->applyIncludes();
         $this->applyOrder();
         if ($this->paginated) {
             return $this->getPaginatedResults();
@@ -67,8 +84,14 @@ class ListService
 
     private function getPaginatedResults()
     {
+        $perPage = $this->searchConfiguration['perPage'];
+        
+        if ($this->maxPerPage !== null && $perPage > $this->maxPerPage) {
+            $perPage = $this->maxPerPage;
+        }
+        
         $countItems = $this->query->count();
-        $paginatedResults = $this->query->simplePaginate($this->searchConfiguration['perPage'])->withQueryString();
+        $paginatedResults = $this->query->simplePaginate($perPage)->withQueryString();
         return [
             'countItems' => $countItems,
             'result' => $paginatedResults,
@@ -154,6 +177,34 @@ class ListService
         $this->searchConfiguration['filters'] = $filters;
     }
 
+    protected function normalizeIncludes(): void
+    {
+        $includes = $this->searchConfiguration['include'] ?? [];
+
+        if (empty($includes)) {
+            $this->searchConfiguration['include'] = [];
+            return;
+        }
+
+        if (is_string($includes)) {
+            $includes = explode(',', $includes);
+        }
+
+        if (!is_array($includes)) {
+            $this->searchConfiguration['include'] = [];
+            return;
+        }
+
+        $includes = array_filter(array_map(function ($item) {
+            if (!is_string($item)) {
+                return null;
+            }
+            return trim($item);
+        }, $includes));
+
+        $this->searchConfiguration['include'] = array_values(array_unique($includes));
+    }
+
     private function applyOrder()
     {
         if ($this->searchConfiguration['sortField']) {
@@ -184,6 +235,23 @@ class ListService
         if (method_exists($this->listModel, $method)) {
             $this->query->$scopeName($data);
         }
+    }
+
+    private function applyIncludes(): void
+    {
+        $includes = $this->filterAllowedIncludes($this->searchConfiguration['include']);
+        if (!empty($includes)) {
+            $this->query->with($includes);
+        }
+    }
+
+    private function filterAllowedIncludes(array $includes): array
+    {
+        if ($this->availableIncludes === null) {
+            return $includes;
+        }
+
+        return array_values(array_intersect($includes, $this->availableIncludes));
     }
 
     protected function customFilters(): array

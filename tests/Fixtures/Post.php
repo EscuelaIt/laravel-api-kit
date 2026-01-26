@@ -5,6 +5,7 @@ namespace EscuelaIT\Test\Fixtures;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use EscuelaIT\Test\Database\Factories\PostFactory;
+use EscuelaIT\Test\Fixtures\Comment;
 
 class Post extends Model
 {
@@ -17,6 +18,11 @@ class Post extends Model
     public function scopeGreaterThanId($query, $id)
     {
         return $query->where('id', '>', $id);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
     }
 
     protected static function newFactory()

@@ -16,6 +16,8 @@ trait ResourceListable {
         'per_page' => 'nullable|integer|min:0|max:10000',
         'belongsTo' => 'nullable|string',
         'relationId' => 'nullable|string',
+        'include' => 'nullable',
+        'include.*' => 'string',
     ];
 
     public function list(ListService $service) {
@@ -38,6 +40,7 @@ trait ResourceListable {
             'filters' => request()->query('filters'),
             'belongsTo' => request()->query('belongsTo'),
             'relationId' => request()->query('relationId'),
+            'include' => request()->query('include'),
         ];
     }
 }

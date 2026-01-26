@@ -125,14 +125,24 @@ With the default configuration, calling the controller’s method will return a 
 Inside a resource’s `ListService`, several properties can be configured to customize how listings behave:
 
 - **`$listModel`** — Defines the model class used for the listing.  
-- **`$paginated`** — Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
-- **`$availableFilterColumns`** — Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
+- **`$paginated`** — Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  - **`$maxPerPage`** — Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
+  ```php
+  protected ?int $maxPerPage = 100;
+  ```
+  You can also configure this using the `setMaxPerPage()` method:  
+  ```php
+  $service->setMaxPerPage(50);
+  ```- **`$availableFilterColumns`** — Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
   ```php
   protected array $availableFilterColumns = ['is_admin', 'country'];
   ```
 - **`$availableScopes`** — Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
+  ```
+- **`$availableIncludes`** — Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+  ```php
+  protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
 - **`$searchConfiguration`** — Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 
@@ -198,6 +208,14 @@ protected bool $paginated = true;
 ```
 
 If pagination is enabled, the default page size is 10.
+
+**Limiting Maximum Page Size**: You can enforce a maximum page size using the `$maxPerPage` property. If a user requests a `per_page` value exceeding this limit, it will be automatically capped to the configured maximum without raising an error:
+
+```php
+protected ?int $maxPerPage = 100;
+```
+
+For example, if `$maxPerPage` is set to `100` and a user requests `per_page=500`, the listing will return a maximum of 100 items per page. This helps prevent performance degradation from excessively large page requests.
 
 #### "filters" Configuration
 
@@ -383,3 +401,48 @@ protected ?array $availableScopes = ['byTeam', 'published'];
 With this configuration, only the `byTeam` and `published` scopes can be applied. Any attempt to apply a different scope via QueryString will be ignored.
 
 > **For enhanced security, it's highly recommended to configure the `$availableScopes` array in `ListService`** to prevent users from enabling unintended scopes that might expose sensitive data or cause undesired filtering behavior.
+
+#### "include" Configuration
+
+The `"include"` configuration allows eager loading of related entities in listing results. This is useful for including associated data (like comments on posts, or payments for users) without requiring additional queries.
+
+```
+example.com/posts?include=comments,author
+```
+
+You can specify multiple relationships separated by commas. The data will be eager-loaded using Laravel's `with()` method.
+
+##### Restricting Allowed Includes with $availableIncludes
+
+Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
+
+By default, `$availableIncludes` is `null`, which means any relationship can be included via QueryString. For security and performance reasons, it's recommended to explicitly define which relationships are allowed:
+
+```php
+protected ?array $availableIncludes = ['comments', 'author', 'tags'];
+```
+
+With this configuration, only the `comments`, `author`, and `tags` relationships can be included. Any attempt to include other relationships via QueryString will be ignored.
+
+You can also set the available includes using the `setAvailableIncludes()` method:
+
+```php
+$service = (new ListService())
+    ->setListModel(Post::class)
+    ->setAvailableIncludes(['comments', 'author'])
+    ->setSearchConfiguration($config);
+```
+
+**Example URL with allowed includes:**
+
+```
+https://example.com/api/posts?include=comments,author
+```
+
+This will return posts with their related comments and authors eager-loaded.
+
+**Example with restricted includes:**
+
+If `$availableIncludes` is set to `['comments']` but you request `?include=comments,author`, only the `comments` relationship will be included. The `author` relationship will be ignored because it's not in the allowed list.
+
+> **For enhanced security and performance, it's highly recommended to configure the `$availableIncludes` array in `ListService`** to prevent users from eager-loading potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
