@@ -13,6 +13,7 @@ class ListService
     protected $query;
     protected bool $paginated = true;
     protected ?array $availableFilterColumns = null;
+    protected ?array $availableScopes = null;
     protected array $searchConfiguration = [
         'perPage' => 10,
         'sortField' => null,
@@ -32,6 +33,12 @@ class ListService
     public function setPaginated(bool $paginated): ListService
     {
         $this->paginated = $paginated;
+        return $this;
+    }
+
+    public function setAvailableScopes(?array $scopes): ListService
+    {
+        $this->availableScopes = $scopes;
         return $this;
     }
 
@@ -157,8 +164,18 @@ class ListService
     private function applyBelongsTo()
     {
         if ($this->searchConfiguration['belongsTo'] != '' && $this->searchConfiguration['relationId'] != '') {
-            $this->applyScope($this->searchConfiguration['belongsTo'], $this->searchConfiguration['relationId']);
+            if ($this->isScopeAllowed($this->searchConfiguration['belongsTo'])) {
+                $this->applyScope($this->searchConfiguration['belongsTo'], $this->searchConfiguration['relationId']);
+            }
         }
+    }
+
+    protected function isScopeAllowed(string $scopeName): bool
+    {
+        if ($this->availableScopes !== null) {
+            return in_array($scopeName, $this->availableScopes);
+        }
+        return true;
     }
 
     protected function applyScope($scopeName, $data)

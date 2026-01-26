@@ -234,4 +234,65 @@ class ListServiceTest extends TestCase
       $results['result']->every(fn($post) => $post->id > 2)
     );
   }
+
+  #[Test]
+  public function it_applies_scope_when_it_is_in_availableScopes()
+  {
+    // Arrange: crear posts con IDs específicos
+    Post::factory()->create(['id' => 1, 'title' => 'Post 1']);
+    Post::factory()->create(['id' => 2, 'title' => 'Post 2']);
+    Post::factory()->create(['id' => 3, 'title' => 'Post 3']);
+    Post::factory()->create(['id' => 4, 'title' => 'Post 4']);
+    Post::factory()->create(['id' => 5, 'title' => 'Post 5']);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setAvailableScopes(['greaterThanId'])
+      ->setSearchConfiguration([
+        'belongsTo' => 'greaterThanId',
+        'relationId' => 2,
+        'perPage' => 10,
+        'sortField' => 'id',
+        'sortDirection' => 'asc',
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert
+    $this->assertEquals(3, $results['countItems']); // Posts 3, 4, 5
+    $this->assertCount(3, $results['result']);
+    $this->assertTrue(
+      $results['result']->every(fn($post) => $post->id > 2)
+    );
+  }
+
+  #[Test]
+  public function it_does_not_apply_scope_when_it_is_not_in_availableScopes()
+  {
+    // Arrange: crear posts con IDs específicos
+    Post::factory()->create(['id' => 1, 'title' => 'Post 1']);
+    Post::factory()->create(['id' => 2, 'title' => 'Post 2']);
+    Post::factory()->create(['id' => 3, 'title' => 'Post 3']);
+    Post::factory()->create(['id' => 4, 'title' => 'Post 4']);
+    Post::factory()->create(['id' => 5, 'title' => 'Post 5']);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setAvailableScopes(['otherScope'])
+      ->setSearchConfiguration([
+        'belongsTo' => 'greaterThanId',
+        'relationId' => 2,
+        'perPage' => 10,
+        'sortField' => 'id',
+        'sortDirection' => 'asc',
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert
+    $this->assertEquals(5, $results['countItems']); // Todos los posts
+    $this->assertCount(5, $results['result']);
+  }
 }

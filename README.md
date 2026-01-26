@@ -130,6 +130,10 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   protected array $availableFilterColumns = ['is_admin', 'country'];
   ```
+- **`$availableScopes`** — Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
+  ```php
+  protected ?array $availableScopes = ['byTeam', 'published'];
+  ```
 - **`$searchConfiguration`** — Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 
 ### QueryString Configurations for Listing Operations
@@ -365,3 +369,17 @@ https://example.com/api/users?belongsTo=byTeam&relationId=2
 ```
 
 This will activate a scope named `byTeam` on the resource model, passing `2` as the parameter, returning **only users belonging to the team with `id=2`**.
+
+##### Restricting Allowed Scopes with $availableScopes
+
+Similar to `$availableFilterColumns`, you can restrict which scopes are allowed to be applied via the `belongsTo` configuration by setting the `$availableScopes` property.
+
+By default, `$availableScopes` is `null`, which means any scope can be applied via QueryString. For security reasons, it's recommended to explicitly define which scopes are allowed:
+
+```php
+protected ?array $availableScopes = ['byTeam', 'published'];
+```
+
+With this configuration, only the `byTeam` and `published` scopes can be applied. Any attempt to apply a different scope via QueryString will be ignored.
+
+> **For enhanced security, it's highly recommended to configure the `$availableScopes` array in `ListService`** to prevent users from enabling unintended scopes that might expose sensitive data or cause undesired filtering behavior.
