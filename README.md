@@ -134,7 +134,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   $service->setMaxPerPage(50);
   ```
-  - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
+- **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
   ```php
   protected array $availableFilterColumns = ['is_admin', 'country'];
   ```
@@ -167,20 +167,41 @@ Allows sending a keyword to search the model for that keyword.
 example.com/users?keyword=paul
 ```
 
-This configuration doesn’t perform any search by itself. You must enable it in the `ListService` by overriding the `createQuery()` method:
+This configuration doesn’t perform any search by itself. You must enable it in the `ListService` by overriding the `applyKeywordFilter()` method:
 
 ```php
-protected function createQuery() {
-    $keyword = '%' . $this->searchConfiguration['keyword'] . '%';
-    return User::where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+protected function applyKeywordFilter(?string $keyword): void 
+{
+    if (!empty($keyword)) {
+        $keyword = '%' . $keyword . '%';
+        return $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+    }
 }
 ```
 
-**Recommendation**: Delegate the search to the model using a scope. Here’s an example using a `similar()` scope (which you’d need to implement with your query logic in the corresponding model):
+**Recommendation**: Delegate the search to the model using a scope. Here’s an example using a `similar()` scope:
 
 ```php
-protected function createQuery() {
-    return User::similar($this->searchConfiguration['keyword']);
+protected function applyKeywordFilter(?string $keyword): void 
+{
+    $this->query->similar($keyword);
+}
+```
+
+You need to implement this scope with your query logic in the corresponding model. Here's an example implementation:
+
+```php
+public function scopeSimilar($query, $keyword)
+{
+    if (empty($keyword)) {
+        return $query;
+    }
+
+    $keyword = '%' . $keyword . '%';
+    return $query->where(function ($q) use ($keyword) {
+        $q->where('title', 'like', $keyword)
+            ->orWhere('status', 'like', $keyword);
+    });
 }
 ```
 

@@ -20,6 +20,19 @@ class Post extends Model
         return $query->where('id', '>', $id);
     }
 
+    public function scopeSimilar($query, $keyword)
+    {
+        if (empty($keyword)) {
+            return $query;
+        }
+
+        $keyword = '%' . $keyword . '%';
+        return $query->where(function ($q) use ($keyword) {
+            $q->where('title', 'like', $keyword)
+                ->orWhere('status', 'like', $keyword);
+        });
+    }
+
     public function comments()
     {
         return $this->hasMany(Comment::class);

@@ -75,6 +75,7 @@ class ListService
     public function getResults()
     {
         $this->query = $this->createQuery();
+        $this->applyKeywordFilter($this->searchConfiguration['keyword']);
         $this->normalizeFilters();
         $this->normalizeIncludes();
         $this->applyCustomFilters();
@@ -113,6 +114,11 @@ class ListService
             }
         }
         return $this;
+    }
+
+    protected function applyKeywordFilter(?string $keyword): void
+    {
+        // Overwrite this method to implement keyword filtering logic
     }
 
     protected function applySearchFilters()

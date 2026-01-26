@@ -37,7 +37,6 @@ class ListServiceTest extends TestCase
   {
     $this->expectException(\EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException::class);
 
-    // Arrange: no se define el modelo
     $service = (new ListService())
       ->setSearchConfiguration([
         'perPage' => 10,
@@ -45,14 +44,12 @@ class ListServiceTest extends TestCase
         'sortDirection' => 'asc',
       ]);
 
-    // Act
     $service->getResults();
   }
 
   #[Test]
   public function it_lists_posts_with_pagination()
   {
-    // Arrange: datos de prueba
     Post::factory()->count(15)->create();
 
     $service = (new ListService())
@@ -63,10 +60,8 @@ class ListServiceTest extends TestCase
         'sortDirection' => 'asc',
       ]);
 
-    // Act
     $results = $service->getResults();
 
-    // Assert
     $this->assertEquals(15, $results['countItems']);
     $this->assertCount(10, $results['result']); // 10 por página
   }
@@ -74,7 +69,6 @@ class ListServiceTest extends TestCase
   #[Test]
   public function it_lists_posts_without_pagination()
   {
-    // Arrange: datos de prueba
     Post::factory()->count(8)->create();
 
     $service = (new ListService())
@@ -86,17 +80,14 @@ class ListServiceTest extends TestCase
       ])
       ->setPaginated(false);
 
-      // Act
     $results = $service->getResults();
 
-    // Assert
     $this->assertCount(8, $results);
   }
 
   #[Test]
   public function it_lists_posts_with_sorting()
   {
-    // Arrange: datos de prueba
     Post::factory()->create(['title' => 'B Post']);
     Post::factory()->create(['title' => 'A Post']);
     Post::factory()->create(['title' => 'C Post']);
@@ -108,10 +99,8 @@ class ListServiceTest extends TestCase
         'sortDirection' => 'asc',
       ]);
 
-    // Act
     $results = $service->getResults();
 
-    // Assert
     $this->assertEquals('A Post', $results['result'][0]->title);
     $this->assertEquals('B Post', $results['result'][1]->title);
     $this->assertEquals('C Post', $results['result'][2]->title);
@@ -120,7 +109,6 @@ class ListServiceTest extends TestCase
   #[Test]
   public function it_lists_posts_without_filters()
   {
-    // Arrange: datos de prueba
     Post::factory()->count(5)->create();
 
     $service = (new ListService())
@@ -131,18 +119,46 @@ class ListServiceTest extends TestCase
         'sortDirection' => 'asc',
       ]);
 
-    // Act
     $results = $service->getResults();
 
-    // Assert
     $this->assertEquals(5, $results['countItems']);
     $this->assertCount(5, $results['result']);
   }
 
   #[Test]
+  public function it_lists_posts_with_keyword_search()
+  {
+    Post::factory()->create(['title' => 'Learn Laravel', 'status' => 'published']);
+    Post::factory()->create(['title' => 'JavaScript Basics', 'status' => 'published']);
+    Post::factory()->create(['title' => 'Why learn Object Oriented PHP', 'status' => 'draft']);
+    Post::factory()->create(['title' => 'JavaScript Basics', 'status' => 'published']);
+
+    $service = (new class extends ListService
+    {
+      protected function applyKeywordFilter(?string $keyword): void 
+      {
+          $this->query->similar($keyword);
+      }
+    })
+      ->setListModel(Post::class)
+      ->setSearchConfiguration([
+        'keyword' => 'Learn',
+        'perPage' => 10,
+        'sortField' => 'id',
+        'sortDirection' => 'asc',
+      ]);
+
+    $results = $service->getResults();
+
+    $this->assertEquals(2, $results['countItems']);
+    $this->assertTrue(
+      $results['result']->every(fn($post) => str_contains(strtolower($post->title), 'learn'))
+    );
+  }
+
+  #[Test]
   public function it_filters_and_paginates_posts()
   {
-    // Arrange: datos de prueba
     Post::factory()->count(3)->create(['status' => 'published']);
     Post::factory()->count(2)->create(['status' => 'draft']);
 
@@ -161,10 +177,8 @@ class ListServiceTest extends TestCase
         'sortDirection' => 'asc',
       ]);
 
-    // Act
     $results = $service->getResults();
 
-    // Assert
     $this->assertEquals(3, $results['countItems']);
     $this->assertCount(2, $results['result']);      // 2 por página
     $this->assertTrue(
