@@ -387,4 +387,70 @@ class ListServiceTest extends TestCase
     $this->assertEquals(20, $results['countItems']); // Total de posts
     $this->assertCount(5, $results['result']); // Respeta el perPage solicitado
   }
+
+  #[Test]
+  public function it_limits_filters_to_maxFilters_when_number_exceeds_limit()
+  {
+    // Arrange: crear posts con diferentes estados y países
+    Post::factory()->create(['status' => 'published', 'title' => 'Post A']);
+    Post::factory()->create(['status' => 'draft', 'title' => 'Post B']);
+    Post::factory()->create(['status' => 'archived', 'title' => 'Post C']);
+    Post::factory()->create(['status' => 'published', 'title' => 'Post D']);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setMaxFilters(1)
+      ->setSearchConfiguration([
+        'filters' => [
+          [
+            'name' => 'status',
+            'value' => 'published',
+            'active' => true,
+          ],
+          [
+            'name' => 'title',
+            'value' => 'Post A',
+            'active' => true,
+          ],
+        ],
+        'perPage' => 10,
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert: Solo se aplica el primer filtro (status = published)
+    $this->assertEquals(2, $results['countItems']);
+  }
+
+  #[Test]
+  public function it_does_not_limit_filters_when_number_is_below_maxFilters()
+  {
+    // Arrange: crear posts
+    Post::factory()->count(2)->create(['status' => 'published']);
+    Post::factory()->count(3)->create(['status' => 'draft']);
+
+    $service = (new ListService())
+      ->setListModel(Post::class)
+      ->setMaxFilters(5)
+      ->setSearchConfiguration([
+        'filters' => [
+          [
+            'name' => 'status',
+            'value' => 'published',
+            'active' => true,
+          ],
+        ],
+        'perPage' => 10,
+      ]);
+
+    // Act
+    $results = $service->getResults();
+
+    // Assert: Se aplica el filtro normalmente
+    $this->assertEquals(2, $results['countItems']);
+    $this->assertTrue(
+      $results['result']->every(fn($post) => $post->status === 'published')
+    );
+  }
 }

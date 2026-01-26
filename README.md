@@ -124,27 +124,30 @@ With the default configuration, calling the controller’s method will return a 
 
 Inside a resource’s `ListService`, several properties can be configured to customize how listings behave:
 
-- **`$listModel`** — Defines the model class used for the listing.  
-- **`$paginated`** — Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  - **`$maxPerPage`** — Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
+- **`$listModel`** Defines the model class used for the listing.  
+- **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
+- **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
   ```php
   protected ?int $maxPerPage = 100;
   ```
   You can also configure this using the `setMaxPerPage()` method:  
   ```php
   $service->setMaxPerPage(50);
-  ```- **`$availableFilterColumns`** — Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
+  ```
+  - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
   ```php
   protected array $availableFilterColumns = ['is_admin', 'country'];
   ```
-- **`$availableScopes`** — Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
+- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** — Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
-- **`$searchConfiguration`** — Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
+- **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
+- **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 
 ### QueryString Configurations for Listing Operations
 
@@ -252,6 +255,14 @@ For a filter to be processed (with `active: true`), the column must be listed in
 ```
 
 This would filter items where `is_admin = true` **and** `country = Spain`. The `continent` filter would be ignored because `active` is `false`.
+
+**Limiting Maximum Number of Filters**: You can enforce a maximum number of filters that can be applied simultaneously using the `$maxFilters` property. If the number of active filters exceeds this limit, only the first filters up to the maximum will be applied without raising an error:
+
+```php
+protected ?int $maxFilters = 5;
+```
+
+For example, if `$maxFilters` is set to `2` and a user sends 4 active filters, only the first 2 filters will be applied. This helps prevent performance issues from overly complex queries with too many filter conditions.
 
 #### Custom Filters Implementation
 

@@ -16,6 +16,7 @@ class ListService
     protected ?array $availableScopes = null;
     protected ?array $availableIncludes = null;
     protected ?int $maxPerPage = null;
+    protected ?int $maxFilters = null;
     protected array $searchConfiguration = [
         'perPage' => 10,
         'sortField' => null,
@@ -54,6 +55,12 @@ class ListService
     public function setMaxPerPage(?int $maxPerPage): ListService
     {
         $this->maxPerPage = $maxPerPage;
+        return $this;
+    }
+
+    public function setMaxFilters(?int $maxFilters): ListService
+    {
+        $this->maxFilters = $maxFilters;
         return $this;
     }
 
@@ -112,6 +119,11 @@ class ListService
     {
         $filters = $this->removeFiltersNotInAvailableColumns($this->searchConfiguration['filters']);
         $filters = $this->removeCustomFilters($filters);
+
+        // Limit number of filters if maxFilters is set
+        if ($this->maxFilters !== null && count($filters) > $this->maxFilters) {
+            $filters = array_slice($filters, 0, $this->maxFilters);
+        }
 
         foreach ($filters as $filter) {
             if ($filter->active) {
