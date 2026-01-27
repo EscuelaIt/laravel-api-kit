@@ -6,7 +6,7 @@ namespace EscuelaIT\APIKit;
 
 use Illuminate\Support\ServiceProvider;
 
-class ApiKitServiceProvider extends ServiceProvider
+class APIKitServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
