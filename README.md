@@ -2,6 +2,18 @@
 
 Utils to create consisten APIs in Laravel.
 
+## Installation
+
+Install the package via Composer:
+
+```bash
+composer require escuelait/laravel-api-kit
+```
+
+That's it! The package will automatically register its service provider.
+
+**Laravel compatibility**: Laravel 9.0+ and PHP 8.1+. 
+
 ## Searches in Resource Index
 
 Provides convenient search and filtering features that can be easily implemented in API resources or in any situation where you need to return collections of elements in JSON format.
