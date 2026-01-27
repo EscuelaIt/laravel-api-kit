@@ -1,6 +1,6 @@
 {
     "name": "escuelait/laravel-api-kit",
-    "description": "Utils to create consisten APIs in Laravel",
+    "description": "Utilities to create consistent APIs in Laravel.",
     "type": "library",
     "license": "MIT",
     "keywords": [
