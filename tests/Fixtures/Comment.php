@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EscuelaIT\Test\Fixtures;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use EscuelaIT\Test\Database\Factories\CommentFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Comment extends Model
 {

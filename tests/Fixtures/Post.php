@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EscuelaIT\Test\Fixtures;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use EscuelaIT\Test\Database\Factories\PostFactory;
-use EscuelaIT\Test\Fixtures\Comment;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
@@ -26,10 +27,12 @@ class Post extends Model
             return $query;
         }
 
-        $keyword = '%' . $keyword . '%';
-        return $query->where(function ($q) use ($keyword) {
+        $keyword = '%'.$keyword.'%';
+
+        return $query->where(function ($q) use ($keyword): void {
             $q->where('title', 'like', $keyword)
-                ->orWhere('status', 'like', $keyword);
+                ->orWhere('status', 'like', $keyword)
+            ;
         });
     }
 

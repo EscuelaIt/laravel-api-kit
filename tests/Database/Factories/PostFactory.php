@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EscuelaIT\Test\Database\Factories;
 
 use EscuelaIT\Test\Fixtures\Post;
@@ -12,7 +14,7 @@ class PostFactory extends Factory
     public function definition()
     {
         return [
-            'title'  => $this->faker->sentence,
+            'title' => $this->faker->sentence,
             'status' => 'published',
         ];
     }

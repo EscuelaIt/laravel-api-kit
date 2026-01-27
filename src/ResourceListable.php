@@ -1,13 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EscuelaIT\APIKit;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Negartarh\APIWrapper\Facades\APIResponse;
 
-trait ResourceListable {
-
+trait ResourceListable
+{
     protected $listValidationRules = [
         'keyword' => 'nullable|string',
         'filters' => 'nullable|array',
@@ -20,18 +21,21 @@ trait ResourceListable {
         'include.*' => 'string',
     ];
 
-    public function list(ListService $service) {
+    public function list(ListService $service)
+    {
         $validator = Validator::make(request()->all(), $this->listValidationRules);
-        if($validator->fails()) {
+        if ($validator->fails()) {
             return APIResponse::unprocessableEntity($validator->errors());
         }
 
         $results = $service->setSearchConfiguration($this->getSearchConfiguration())->getResults();
-        $countItems = isset($results['countItems']) ? $results['countItems'] : count($results);
-        return APIResponse::ok($results, $countItems . ' items found');
+        $countItems = $results['countItems'] ?? count($results);
+
+        return APIResponse::ok($results, $countItems.' items found');
     }
 
-    private function getSearchConfiguration() {
+    private function getSearchConfiguration()
+    {
         return [
             'perPage' => request()->query('per_page'),
             'sortField' => request()->query('sortField'),
