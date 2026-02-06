@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EscuelaIT\APIKit;
 
+use EscuelaIT\APIKit\View\Components\CrudList;
 use Illuminate\Support\ServiceProvider;
 
 class APIKitServiceProvider extends ServiceProvider
@@ -12,7 +13,7 @@ class APIKitServiceProvider extends ServiceProvider
     {
         // Load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'api-kit');
-        
+
         if ($this->app->runningInConsole()) {
             // Publish views
             $this->publishes([
@@ -23,10 +24,10 @@ class APIKitServiceProvider extends ServiceProvider
                 __DIR__.'/../resources/assets' => resource_path('vendor/api-kit'),
             ], 'api-kit-assets');
         }
-        
+
         // Register Blade components
         $this->loadViewComponentsAs('api-kit', [
-            \EscuelaIT\APIKit\View\Components\CrudList::class,
+            CrudList::class,
         ]);
     }
 

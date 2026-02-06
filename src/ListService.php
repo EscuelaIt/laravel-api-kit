@@ -89,9 +89,11 @@ class ListService
         return $this->query->get();
     }
 
-    public function getAllIds() {
+    public function getAllIds()
+    {
         $this->paginated = false;
         $this->getResults();
+
         return $this->query->get()->pluck($this->identifierField);
     }
 

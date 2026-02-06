@@ -13,7 +13,7 @@ use EscuelaIT\APIKit\ActionResult;
  */
 class ActionResultTest extends TestCase
 {
-    public function test_action_result_success_returns_true(): void
+    public function testActionResultSuccessReturnsTrue(): void
     {
         $result = ActionResult::success('Operation completed');
 
@@ -23,7 +23,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($result->getData());
     }
 
-    public function test_action_result_success_with_default_message(): void
+    public function testActionResultSuccessWithDefaultMessage(): void
     {
         $result = ActionResult::success();
 
@@ -33,7 +33,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($result->getData());
     }
 
-    public function test_action_result_error_returns_false(): void
+    public function testActionResultErrorReturnsFalse(): void
     {
         $errors = ['email' => ['Email is required']];
         $result = ActionResult::error($errors, 'Validation failed');
@@ -43,7 +43,7 @@ class ActionResultTest extends TestCase
         $this->assertEquals($errors, $result->getErrors());
     }
 
-    public function test_action_result_error_with_default_message(): void
+    public function testActionResultErrorWithDefaultMessage(): void
     {
         $errors = ['name' => ['Name is required']];
         $result = ActionResult::error($errors);
@@ -53,7 +53,7 @@ class ActionResultTest extends TestCase
         $this->assertEquals($errors, $result->getErrors());
     }
 
-    public function test_action_result_error_with_empty_errors(): void
+    public function testActionResultErrorWithEmptyErrors(): void
     {
         $result = ActionResult::error([], 'Something went wrong');
 
@@ -62,7 +62,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($result->getErrors());
     }
 
-    public function test_action_result_returns_to_array_format_success(): void
+    public function testActionResultReturnsToArrayFormatSuccess(): void
     {
         $result = ActionResult::success('Success message');
         $resultArray = $result->toArray();
@@ -78,7 +78,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($resultArray['data']);
     }
 
-    public function test_action_result_returns_to_array_format_error(): void
+    public function testActionResultReturnsToArrayFormatError(): void
     {
         $errors = ['email' => ['Invalid email'], 'phone' => ['Phone is required']];
         $result = ActionResult::error($errors, 'Validation error');
@@ -95,7 +95,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($resultArray['data']);
     }
 
-    public function test_action_result_with_multiple_errors(): void
+    public function testActionResultWithMultipleErrors(): void
     {
         $errors = [
             'email' => ['Email is required', 'Email must be valid'],
@@ -111,7 +111,7 @@ class ActionResultTest extends TestCase
         $this->assertArrayHasKey('age', $result->getErrors());
     }
 
-    public function test_action_result_get_errors_returns_array(): void
+    public function testActionResultGetErrorsReturnsArray(): void
     {
         $errors = ['field1' => ['error1'], 'field2' => ['error2']];
         $result = ActionResult::error($errors);
@@ -121,7 +121,7 @@ class ActionResultTest extends TestCase
         $this->assertEquals($errors, $returnedErrors);
     }
 
-    public function test_action_result_get_message_returns_string(): void
+    public function testActionResultGetMessageReturnsString(): void
     {
         $message = 'Custom error message';
         $result = ActionResult::error([], $message);
@@ -130,7 +130,7 @@ class ActionResultTest extends TestCase
         $this->assertEquals($message, $result->getMessage());
     }
 
-    public function test_action_result_is_success_returns_boolean(): void
+    public function testActionResultIsSuccessReturnsBoolean(): void
     {
         $successResult = ActionResult::success();
         $errorResult = ActionResult::error();
@@ -141,7 +141,7 @@ class ActionResultTest extends TestCase
         $this->assertFalse($errorResult->isSuccess());
     }
 
-    public function test_action_result_success_with_data(): void
+    public function testActionResultSuccessWithData(): void
     {
         $data = ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'];
         $result = ActionResult::success('User created', $data);
@@ -152,7 +152,7 @@ class ActionResultTest extends TestCase
         $this->assertEmpty($result->getErrors());
     }
 
-    public function test_action_result_success_with_complex_data(): void
+    public function testActionResultSuccessWithComplexData(): void
     {
         $data = [
             'user' => ['id' => 1, 'name' => 'John'],
@@ -168,7 +168,7 @@ class ActionResultTest extends TestCase
         $this->assertArrayHasKey('metadata', $result->getData());
     }
 
-    public function test_action_result_success_data_in_to_array(): void
+    public function testActionResultSuccessDataInToArray(): void
     {
         $data = ['items' => [1, 2, 3], 'total' => 3];
         $result = ActionResult::success('Items fetched', $data);
@@ -179,7 +179,7 @@ class ActionResultTest extends TestCase
         $this->assertTrue($resultArray['success']);
     }
 
-    public function test_action_result_get_data_returns_array(): void
+    public function testActionResultGetDataReturnsArray(): void
     {
         $data = ['key' => 'value'];
         $result = ActionResult::success('Success', $data);

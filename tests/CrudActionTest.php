@@ -14,7 +14,7 @@ use EscuelaIT\APIKit\CrudAction;
  */
 class CrudActionTest extends TestCase
 {
-    public function test_crud_action_returns_success_when_data_is_valid(): void
+    public function testCrudActionReturnsSuccessWhenDataIsValid(): void
     {
         $action = new class([], ['name' => 'Test'], null) extends CrudAction {
             protected function validationRules(): array
@@ -37,7 +37,7 @@ class CrudActionTest extends TestCase
         $this->assertEmpty($result->getErrors());
     }
 
-    public function test_crud_action_returns_error_when_data_is_invalid(): void
+    public function testCrudActionReturnsErrorWhenDataIsInvalid(): void
     {
         $action = new class([], ['name' => ''], null) extends CrudAction {
             protected function validationRules(): array
@@ -61,7 +61,7 @@ class CrudActionTest extends TestCase
         $this->assertArrayHasKey('name', $result->getErrors());
     }
 
-    public function test_crud_action_validates_multiple_fields(): void
+    public function testCrudActionValidatesMultipleFields(): void
     {
         $action = new class([], ['email' => 'invalid-email', 'age' => -5], null) extends CrudAction {
             protected function validationRules(): array
@@ -85,7 +85,7 @@ class CrudActionTest extends TestCase
         $this->assertArrayHasKey('age', $result->getErrors());
     }
 
-    public function test_crud_action_stores_models_data_and_user(): void
+    public function testCrudActionStoresModelsDataAndUser(): void
     {
         $models = ['User' => 'UserModel'];
         $data = ['name' => 'John Doe'];
@@ -110,7 +110,7 @@ class CrudActionTest extends TestCase
         $this->assertEquals($user, $action->getUser());
     }
 
-    public function test_crud_action_with_empty_validation_rules(): void
+    public function testCrudActionWithEmptyValidationRules(): void
     {
         $action = new class([], [], null) extends CrudAction {
             public function handle(): ActionResult
@@ -125,7 +125,7 @@ class CrudActionTest extends TestCase
         $this->assertEquals('No validation needed', $result->getMessage());
     }
 
-    public function test_crud_action_validates_with_custom_messages(): void
+    public function testCrudActionValidatesWithCustomMessages(): void
     {
         $action = new class([], ['phone' => ''], null) extends CrudAction {
             protected function validationRules(): array
@@ -147,14 +147,9 @@ class CrudActionTest extends TestCase
         $this->assertArrayHasKey('phone', $result->getErrors());
     }
 
-    public function test_crud_action_with_nested_validation_rules(): void
+    public function testCrudActionWithNestedValidationRules(): void
     {
-        $action = new class([], [
-            'user' => [
-                'name' => 'John',
-                'email' => 'john@example.com',
-            ],
-        ], null) extends CrudAction {
+        $action = new class([], ['user' => ['name' => 'John', 'email' => 'john@example.com']], null) extends CrudAction {
             protected function validationRules(): array
             {
                 return [
@@ -174,14 +169,9 @@ class CrudActionTest extends TestCase
         $this->assertTrue($result->isSuccess());
     }
 
-    public function test_crud_action_fails_nested_validation(): void
+    public function testCrudActionFailsNestedValidation(): void
     {
-        $action = new class([], [
-            'user' => [
-                'name' => '',
-                'email' => 'invalid-email',
-            ],
-        ], null) extends CrudAction {
+        $action = new class([], ['user' => ['name' => '', 'email' => 'invalid-email']], null) extends CrudAction {
             protected function validationRules(): array
             {
                 return [

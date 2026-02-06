@@ -34,17 +34,20 @@ trait ResourceListable
         return APIResponse::ok($results, $countItems.' items found');
     }
 
-    public function allIds(ListService $service) {
+    public function allIds(ListService $service)
+    {
         $validator = $this->getValidator();
         if ($validator->fails()) {
             return APIResponse::unprocessableEntity($validator->errors());
         }
 
         $allIds = $service->setSearchConfiguration($this->getSearchConfiguration())->getAllIds();
+
         return APIResponse::ok($allIds);
     }
 
-    private function getValidator() {
+    private function getValidator()
+    {
         return Validator::make(request()->all(), $this->listValidationRules);
     }
 

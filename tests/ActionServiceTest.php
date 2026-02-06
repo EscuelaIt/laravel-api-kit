@@ -68,9 +68,7 @@ class ActionServiceTest extends TestCase
         Post::factory()->create(['id' => 2, 'title' => 'Post 2']);
 
         TestAction::setRules([]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Action executed successfully');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Action executed successfully'));
 
         $service = new class extends ActionService {
             protected string $actionModel = Post::class;
@@ -122,6 +120,7 @@ class ActionServiceTest extends TestCase
         TestAction::setRules([]);
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $count = $action->getModels()->count();
+
             return ActionResult::success("Processed {$count} models");
         });
 
@@ -157,9 +156,7 @@ class ActionServiceTest extends TestCase
         };
 
         TestAction::setRules([]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Should not be called');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Should not be called'));
 
         $service->setActionType('testAction', TestAction::class);
 
@@ -194,9 +191,7 @@ class ActionServiceTest extends TestCase
         };
 
         TestAction::setRules([]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Action completed');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Action completed'));
 
         $service->setActionType('testAction', TestAction::class);
 
@@ -231,9 +226,7 @@ class ActionServiceTest extends TestCase
         };
 
         TestAction::setRules([]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Should not be called');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Should not be called'));
 
         $service->setActionType('testAction', TestAction::class);
 
@@ -262,6 +255,7 @@ class ActionServiceTest extends TestCase
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $user = $action->getUser();
             $userName = $user->name ?? 'No user';
+
             return ActionResult::success("User: {$userName}");
         });
 
@@ -301,6 +295,7 @@ class ActionServiceTest extends TestCase
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $data = $action->getData();
             $status = $data['status'] ?? 'unknown';
+
             return ActionResult::success("Status: {$status}");
         });
 
@@ -350,6 +345,7 @@ class ActionServiceTest extends TestCase
         TestAction::setRules([]);
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $count = $action->getModels()->count();
+
             return ActionResult::success("Found {$count} models");
         });
 
@@ -386,6 +382,7 @@ class ActionServiceTest extends TestCase
         TestAction::setRules([]);
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $count = $action->getModels()->count();
+
             return ActionResult::success("Processed {$count} models");
         });
 
@@ -424,6 +421,7 @@ class ActionServiceTest extends TestCase
         TestAction::setRules([]);
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $count = $action->getModels()->count();
+
             return ActionResult::success("Found {$count} models");
         });
 
@@ -448,14 +446,10 @@ class ActionServiceTest extends TestCase
         Post::factory()->create(['id' => 1, 'title' => 'Post 1']);
 
         TestAction::setRules([]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Action A executed');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Action A executed'));
 
         TestActionB::setRules([]);
-        TestActionB::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Action B executed');
-        });
+        TestActionB::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Action B executed'));
 
         $service = new class extends ActionService {
             protected string $actionModel = Post::class;
@@ -500,9 +494,7 @@ class ActionServiceTest extends TestCase
         TestAction::setRules([
             'title' => 'required|string',
         ]);
-        TestAction::setHandler(static function (CrudAction $action): ActionResult {
-            return ActionResult::success('Should not be called');
-        });
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Should not be called'));
 
         $service = new class extends ActionService {
             protected string $actionModel = Post::class;
@@ -541,6 +533,7 @@ class ActionServiceTest extends TestCase
         TestAction::setHandler(static function (CrudAction $action): ActionResult {
             $data = $action->getData();
             $title = $data['title'];
+
             return ActionResult::success("Updated to: {$title}");
         });
 

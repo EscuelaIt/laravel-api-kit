@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace EscuelaIT\APIKit\View\Components;
 
-use Illuminate\Support\Str;
 use Illuminate\View\Component;
 
 class CrudList extends Component
@@ -18,7 +17,6 @@ class CrudList extends Component
         public ?array $filters = null,
         public ?array $sort = null,
     ) {
-
         $this->config = [
             'availableFilters' => $this->filters ?? [],
             'sort' => $this->sort ?? null,
@@ -26,7 +24,7 @@ class CrudList extends Component
                 'disableFilter' => $this->filters ? false : true,
                 'disableSort' => $this->sort ? false : true,
                 'disablePagination' => false,
-            ]
+            ],
         ];
     }
 

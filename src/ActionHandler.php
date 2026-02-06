@@ -10,7 +10,8 @@ use Negartarh\APIWrapper\Facades\APIResponse;
 
 trait ActionHandler
 {
-    public function handleAction(ActionService $actionService) {
+    public function handleAction(ActionService $actionService)
+    {
         $user = Auth::user();
 
         $validator = Validator::make(request()->all(), [
@@ -19,11 +20,11 @@ trait ActionHandler
             'data' => ['present'],
         ]);
 
-        if($validator->fails()) {
+        if ($validator->fails()) {
             return APIResponse::unprocessableEntity($validator->errors());
         }
 
-        if(! $actionService->hasActionType(request()->type)) {
+        if (!$actionService->hasActionType(request()->type)) {
             return APIResponse::unprocessableEntity([], 'The action type is not valid.');
         }
 
@@ -31,6 +32,7 @@ trait ActionHandler
         if ($response->isSuccess()) {
             return APIResponse::ok($response->getData(), $response->getMessage());
         }
+
         return APIResponse::unprocessableEntity($response->getErrors(), $response->getMessage());
     }
 }

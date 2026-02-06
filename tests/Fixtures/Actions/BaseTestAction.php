@@ -34,11 +34,6 @@ abstract class BaseTestAction extends CrudAction
         unset(self::$handlers[static::class], self::$rules[static::class]);
     }
 
-    protected function validationRules(): array
-    {
-        return self::$rules[static::class] ?? [];
-    }
-
     public function handle(): ActionResult
     {
         $handler = self::$handlers[static::class] ?? null;
@@ -48,5 +43,10 @@ abstract class BaseTestAction extends CrudAction
         }
 
         return ActionResult::success('Action executed successfully');
+    }
+
+    protected function validationRules(): array
+    {
+        return self::$rules[static::class] ?? [];
     }
 }
