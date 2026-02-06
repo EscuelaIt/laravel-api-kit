@@ -14,9 +14,34 @@ That's it! The package will automatically register its service provider.
 
 **Laravel compatibility**: Laravel 9.0+ and PHP 8.1+. 
 
+## Built-in Utilities in this Package
+
+This package offers two fundamental utilities for developing APIs that usually require significant work and are quite repetitive across different API resources.
+
+1. Searches and listings on resources with or without pagination
+2. Execution of actions on batches of elements
+
+The package provides mechanisms that significantly simplify these two operations, allowing fine-grained customization of their behavior, which eliminates much of the tedious development work for resources.
+
+## Consistent API Responses
+
+Using the mechanisms proposed by this API utilities kit, you will ensure your resources work consistently, allowing your clients to work more predictably.
+
+One of the keys to achieving this is the use of a library that provides a common interface for generating JSON responses: [Laravel API Response Wrapper](https://github.com/negartarh/apiwrapper). Thanks to it, a homogeneous API response schema is always used.
+
+We encourage you to use it as well in the development of other API operations where this kit does not provide ready-made solutions.
+
+## Frontend Components
+
+This library can be perfectly combined with the catalog of [CRUD Components for Dile Components frontend](https://dile-components.com/crud/).
+
+Thanks to Dile Components' CRUD frontend components, you can easily build user interfaces to provide listings, filtering, sorting, batch action processing, as well as other operations like insertions, edits, and deletions.
+
+If you already use Dile Components' CRUD components, you'll see that applying the Laravel solutions kit allows you to build the backend much faster.
+
 ## Searches in Resource Index
 
-Provides convenient search and filtering features that can be easily implemented in API resources or in any situation where you need to return collections of elements in JSON format.
+Laravel API Kit provides convenient search and filtering features that can be easily implemented in API resources or in any situation where you need to return collections of elements in JSON format.
 
 To implement this utility, two components are required:
 
@@ -25,7 +50,7 @@ To implement this utility, two components are required:
 
 ### The ResourceListable Trait
 
-To enable listing functionality, you simply need to implement the `ResourceListable` trait in a controller.
+To achieve listing functionality, we simply need to implement the `ResourceListable` trait in a controller.
 
 ```php
 namespace App\Http\Controllers;
@@ -43,11 +68,42 @@ class ListUsersController extends Controller
 }
 ```
 
-By implementing the `ResourceListable` trait in your controller, you get a `list()` method that returns model data in JSON format.
+Thanks to implementing the `ResourceListable` trait in the controller, several utilities are obtained, mainly:
 
-The `ResourceListable` trait is built generically so it can work with any entity you want to expose as a resource. However, to define the model on which searches will be performed, you must pass a service instance to the `list()` method.
+- `list()` method that returns model data in JSON, performing filtering and sorting of elements, as well as optional pagination.
+- `allIds()` method that allows obtaining the complete list of model identifiers given a query, once filters are applied. It's useful when you want to know all the elements that are part of a result set, regardless of pagination, to request batch actions on them.
 
-In the controller above, that service is called `$userListService`.
+Both methods require receiving a service that allows detailed configuration of query aspects, such as the model to operate on or the types of filtering, among other things.
+
+Below is an example of a controller that provides the functionalities offered by the trait:
+
+```php
+namespace App\Http\Controllers\User;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use EscuelaIT\APIKit\ResourceListable;
+use App\Services\User\UserListService;
+
+class ListUsersController extends Controller
+{
+    use ResourceListable;
+
+    public function index()
+    {
+        $service = new UserListService();
+        return $this->list($service);
+    }
+
+    public function ids()
+    {
+        $service = new UserListService();
+        return $this->allIds($service);
+    }
+}
+```
+
+The listing customization service is what allows the `ResourceListable` trait to work generically, being able to operate on any entity you want to incorporate as an API resource. 
 
 ### ListService
 
@@ -137,6 +193,7 @@ With the default configuration, calling the controller’s method will return a 
 Inside a resource’s `ListService`, several properties can be configured to customize how listings behave:
 
 - **`$listModel`** Defines the model class used for the listing.  
+- **`$identifierField`** The database table field to identify resource items, default is 'id'.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
   ```php
@@ -490,3 +547,300 @@ This will return posts with their related comments and authors eager-loaded.
 If `$availableIncludes` is set to `['comments']` but you request `?include=comments,author`, only the `comments` relationship will be included. The `author` relationship will be ignored because it's not in the allowed list.
 
 > **For enhanced security and performance, it's highly recommended to configure the `$availableIncludes` array in `ListService`** to prevent users from eager-loading potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
+
+## Resource Actions
+
+Besides typical CRUD operations, applications often require additional behaviors to complete custom business operations. For example, for an invoice you might need an action to create a duplicate, or for a quote you might need an action to generate an invoice from it.
+
+Additionally, some of these operations sometimes need to be performed in batches. For example, marking a series of invoices as paid, or sending a notification to a series of users, without having to perform the same action one by one.
+
+For this purpose, resource actions exist.
+
+To build these actions, we need to define a couple of components:
+
+- A single controller to receive all action execution requests on a model in a unified way.
+- A service that defines how actions should be executed, indicating which model they operate on, what actions are possible, etc.
+- The action itself, which contains the code with the necessary logic to execute it. Each action is resolved in its own dedicated class that implements it.
+
+### Action Controller
+
+We will need a single controller to execute all necessary actions on an entity. This controller will receive the data to process the action via POST, such as the action type, the identifiers of the elements on which the action should be executed, and any additional data the action needs.
+
+To define the controller, we will create a route like this:
+
+```php
+Route::post('/users/action', ActionUsersController::class);
+```
+
+### ActionHandler Trait
+
+To easily implement the action controller, the `ActionHandler` trait is provided, which must be used in the controller that receives the action data to process.
+
+```php
+namespace App\Http\Controllers\User;
+
+use EscuelaIT\APIKit\ActionHandler;
+
+class ActionUsersController extends Controller
+{
+    use ActionHandler;
+}
+```
+
+Inside the controller, you must implement the method configured in the POST route and invoke the `handleAction()` method provided by the `ActionHandler` trait, passing an instance of the `ActionService` that defines the action system configuration.
+
+```php
+public function __invoke()
+{
+    $userActionService = new UserActionService();
+    return $this->handleAction($userActionService);
+}
+```
+
+The previous `__invoke` method is because we've chosen to use an invokable controller, although this is not a requirement for the action system to work.
+
+For convenience, it's always useful to have the `ActionService` instance injected into the method, delegating to Laravel's service container the instantiation of the corresponding service.
+
+```php
+public function __invoke(UserActionService $userActionService)
+{
+    return $this->handleAction($userActionService);
+}
+```
+
+The controller expects to receive a payload like the following:
+
+```json
+{
+    "type": "SetAdminUserAction",
+    "relatedIds": [
+        "3",
+        "5"
+    ],
+    "data": {
+        "is_admin": false
+    }
+}
+```
+
+- `type`: the type of action that will be executed
+- `relatedIds`: the identifiers of the models on which the action will be executed
+- `data`: any set of data that the action requires to be processed
+
+### ActionService
+
+To configure the action system for each entity, we use the `ActionService` class provided by the Laravel API Kit package.
+
+The most common approach is to create our own service by extending the `ActionService` class and making the appropriate configurations.
+
+```php
+namespace App\Services\User;
+
+use App\Models\User;
+use EscuelaIT\APIKit\ActionService;
+use EscuelaIT\APIKit\Actions\DeleteAction;
+
+class UserActionService extends ActionService
+{
+    protected string $actionModel = User::class;
+    protected array $actionTypes = [
+        'DeleteAction' => DeleteAction::class,
+    ];
+}
+```
+
+#### ActionService Properties
+
+The properties that can be configured in the custom `ActionService` are the following:
+
+##### `$actionModel` Property
+
+Allows defining the class of the model that will be used to process the actions.
+
+```php
+protected string $actionModel = User::class;
+```
+
+##### `$actionTypes` Property
+
+This is an associative array that defines the types of actions that can be performed on a model. In this array, the keys will be the action name, which corresponds to the `type` value received by the controller via POST. The value will be the action class responsible for processing it.
+
+```php
+protected array $actionTypes = [
+    'DeleteAction' => DeleteAction::class,
+    'SetAdminUserAction' => SetAdminUserAction::class,
+];
+```
+
+##### `$maxModelsPerAction` Property
+
+Allows specifying the maximum number of elements on which an action is allowed to be executed.
+
+The default value of this property is 100, so if an action is requested to be executed on more than 100 elements, a validation error will occur, sending an HTTP 422 response code with a message.
+
+```php
+protected int $maxModelsPerAction = 50;
+```
+
+##### `$identifierField` Property
+
+This is the field in the model's table where matches will be looked for to determine which elements should be processed.
+
+The default value is `id`. So it expects that when requesting action processing, the identifiers of the elements are sent in the `relatedIds` field sent via POST to the controller.
+
+For example, it could be set to `slug` if what we will receive in the `relatedIds` field are the slugs of the elements on which we want to process the actions.
+
+```php
+protected string $identifierField = 'slug';
+```
+
+#### ActionService Methods
+
+Although not common, if you want to further customize the service's behavior, besides the previous properties, you can override methods that allow performing arbitrary actions.
+
+- `createQuery()`: initializes the query
+- `queryModels()`: filters the models with the received identifiers
+- `getModels()`: returns the collection of models resulting from the query
+
+For example, this would restrict the `ActionService` to execute actions only on users who are not administrators.
+
+```php
+protected function createQuery()
+{
+    return User::where('is_admin', false);
+}
+```
+
+### Actions
+
+To define particular behaviors for each type of action, we use action classes. Actions must extend the abstract `CrudAction` class.
+
+The `ActionHandler` trait will call the corresponding action, deduced from the `type` value and according to the corresponding class in the `$actionTypes` array of the `ActionService`.
+
+When building the action, three pieces of data will be passed:
+
+- The user authenticated in this request, or `null` if none exists. This user will be stored as the `$user` property.
+- The model identifiers, which will be used to query the database and build the collection of related models based on the query, available in the `$models` property.
+- The data sent in the request to the controller in the `data` field of the payload. This data will be available in the `$data` property.
+
+With this data, an action can be defined as shown in the following example:
+
+```php
+namespace App\Actions\User;
+
+use EscuelaIT\APIKit\CrudAction;
+use EscuelaIT\APIKit\ActionResult;
+
+class SetAdminUserAction extends CrudAction {
+
+    protected function validationRules(): array {
+        return [
+            'is_admin' => 'nullable|boolean',
+        ];
+    }
+
+    public function handle(): ActionResult
+    {
+        foreach($this->models as $model) {
+            if($this->user->can('update', $model)) {
+                $model->is_admin = $this->data['is_admin'];
+                $model->save();
+            }
+        }
+        return $this->createActionResultSuccess('Admin updated', [
+            'new_value' => $this->data['is_admin'],
+        ]);
+    }
+}
+```
+
+The `validationRules()` method allows defining validation rules for the data set contained in the `data` field of the payload.
+
+The `handle()` method is responsible for processing the action. Typically in this method, you iterate over each of the models in the `$models` property. For each model, you can check if the user has permission to perform the actions and then execute the action if possible.
+
+Finally, the action must return a response by sending an instance of the `ActionResult` class. To facilitate creating the response in the appropriate format, the `CrudAction` class provides a utility method:
+
+- `createActionResultSuccess($message, $data)`: Allows generating an `ActionResult` instance for a positive response, sending a response message and an array of data to be reported to the client that requested the action.
+
+The action processing flow already provides all the mechanisms to validate the action data, both the action format itself and the format of the specific data required by each type of action. Therefore, it's normal that if the `handle` method is executed, the action can be processed. However, if for any reason additional checks are needed and extra errors must be sent, this can be done in the `handle` method using another utility method that allows producing an error response message.
+
+- `createActionResultError($message, $errors)`: Allows generating an `ActionResult` instance for a negative response, sending a message and an associative array of errors.
+
+The `handle()` method of the action must return the `ActionResult` instance, created by the `createActionResultSuccess()` or `createActionResultError()` methods. However, if these methods are not sufficient, you can also directly use the static `success()` or `error()` methods of the `ActionResult` class.
+
+#### Action Response Formats
+
+Once the action is processed, a response will be sent to the client. The format is consistent with other response formats from other types of API requests.
+
+In case of success, a JSON will be sent to the client in this format:
+
+```json
+{
+    "status": 200,
+    "message": "Admin updated",
+    "data": {
+        "msg": "Admin updated",
+        "action": "SetAdminUserAction",
+        "data": {
+            "new_value": false
+        }
+    },
+    "errors": [],
+    "execution": "84ms",
+    "version": "1"
+}
+```
+
+In case of a validation error, the response format would be the following:
+
+```json
+{
+    "status": 422,
+    "message": "The provided data is not valid.",
+    "errors": {
+        "foo": [
+            "The foo field is required."
+        ]
+    },
+    "data": [],
+    "execution": "197ms",
+    "version": "1"
+}
+```
+
+### ActionResult Class
+
+This class is used internally to create homogeneous action responses. It is prepared to create both positive and negative messages.
+
+To create instances, the only available methods are the following:
+
+#### `success()` Method
+
+```php
+static function success(string $message = 'Ok', array $data = []): ActionResult
+```
+
+Returns an `ActionResult` instance configured as a success response.
+
+```php
+$actionSuccessInstance = ActionResult::success('Action completed successfully', [
+    'total_received' => 5, 
+    'successfully_processed' => 4,
+]);
+```
+
+#### `error()` Method
+
+```php
+static function error(array $errors = [], string $message = 'Error'): ActionResult
+```
+
+Returns an `ActionResult` instance configured as an error response.
+
+The `$errors` parameter expects an associative array of errors where the keys are the fields where the error occurred and the values are the specific errors found.
+
+```php
+$actionErrorInstance = ActionResult::error([
+    'count' => ['The field count must be a number']
+], $message);
+```

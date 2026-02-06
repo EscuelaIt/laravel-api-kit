@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 class ListService
 {
     protected string $listModel;
+    protected string $identifierField = 'id';
     protected $query;
     protected bool $paginated = true;
     protected ?array $availableFilterColumns = null;
@@ -86,6 +87,12 @@ class ListService
         }
 
         return $this->query->get();
+    }
+
+    public function getAllIds() {
+        $this->paginated = false;
+        $this->getResults();
+        return $this->query->get()->pluck($this->identifierField);
     }
 
     public function setSearchConfiguration(array $config): ListService

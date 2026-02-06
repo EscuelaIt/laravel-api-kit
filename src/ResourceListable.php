@@ -23,7 +23,7 @@ trait ResourceListable
 
     public function list(ListService $service)
     {
-        $validator = Validator::make(request()->all(), $this->listValidationRules);
+        $validator = $this->getValidator();
         if ($validator->fails()) {
             return APIResponse::unprocessableEntity($validator->errors());
         }
@@ -32,6 +32,20 @@ trait ResourceListable
         $countItems = $results['countItems'] ?? count($results);
 
         return APIResponse::ok($results, $countItems.' items found');
+    }
+
+    public function allIds(ListService $service) {
+        $validator = $this->getValidator();
+        if ($validator->fails()) {
+            return APIResponse::unprocessableEntity($validator->errors());
+        }
+
+        $allIds = $service->setSearchConfiguration($this->getSearchConfiguration())->getAllIds();
+        return APIResponse::ok($allIds);
+    }
+
+    private function getValidator() {
+        return Validator::make(request()->all(), $this->listValidationRules);
     }
 
     private function getSearchConfiguration()
