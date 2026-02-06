@@ -40,7 +40,7 @@ class ActionHandlerTest extends TestCase
   }
 
   #[Test]
-  public function itCallsHasActionTypeWhenValidationPasses(): void
+  public function itProcessActionWhenValidationPasses(): void
   {
     $request = Request::create('/', 'POST', [
       'type' => 'test-action',
@@ -55,13 +55,17 @@ class ActionHandlerTest extends TestCase
       ->with('test-action')
       ->andReturn(true);
     
+    
     $actionResult = \Mockery::mock(\EscuelaIT\APIKit\ActionResult::class);
     $actionResult->shouldReceive('isSuccess')
       ->once()
       ->andReturn(true);
-    $actionResult->shouldReceive('toArray')
+    $actionResult->shouldReceive('getData')
       ->once()
       ->andReturn([]);
+    $actionResult->shouldReceive('getMessage')
+      ->once()
+      ->andReturn('');
     
     $service->shouldReceive('processAction')
       ->once()
@@ -69,7 +73,7 @@ class ActionHandlerTest extends TestCase
 
     APIResponse::shouldReceive('ok')
       ->once()
-      ->with([]);
+      ->with([], '');
 
     $this->actionController->handleAction($service);
   }
