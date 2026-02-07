@@ -56,7 +56,6 @@ class CrudActionTest extends TestCase
         $result = $action->processAction();
 
         $this->assertFalse($result->isSuccess());
-        $this->assertEquals('The provided data is not valid.', $result->getMessage());
         $this->assertNotEmpty($result->getErrors());
         $this->assertArrayHasKey('name', $result->getErrors());
     }

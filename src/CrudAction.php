@@ -28,9 +28,11 @@ abstract class CrudAction
             return $this->handle();
         }
 
+        $errorMessage = $this->buildValidationErrorMessage();
+
         return ActionResult::error(
             $this->validationErrors ?? [],
-            'The provided data is not valid.'
+            $errorMessage
         );
     }
 
@@ -60,6 +62,35 @@ abstract class CrudAction
         $this->validationErrors = $validator->errors()->toArray();
 
         return !$validator->fails();
+    }
+
+    protected function buildValidationErrorMessage(): string
+    {
+        if (empty($this->validationErrors)) {
+            return 'The provided data is not valid.';
+        }
+
+        // Obtener todos los errores en una lista plana
+        $allErrors = [];
+        foreach ($this->validationErrors as $fieldErrors) {
+            $allErrors = array_merge($allErrors, $fieldErrors);
+        }
+
+        if (empty($allErrors)) {
+            return 'The provided data is not valid.';
+        }
+
+        // Primer error
+        $firstError = $allErrors[0];
+        $totalErrors = count($allErrors);
+
+        if (1 === $totalErrors) {
+            return $firstError;
+        }
+
+        $additionalErrors = $totalErrors - 1;
+
+        return "{$firstError} and {$additionalErrors} errors more.";
     }
 
     protected function createActionResultSuccess(string $message, array $data = []): ActionResult

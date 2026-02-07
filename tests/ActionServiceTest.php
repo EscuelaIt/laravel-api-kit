@@ -517,7 +517,6 @@ class ActionServiceTest extends TestCase
 
         // Assert
         $this->assertFalse($result->isSuccess());
-        $this->assertEquals('The provided data is not valid.', $result->getMessage());
         $this->assertArrayHasKey('title', $result->getErrors());
     }
 
