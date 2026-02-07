@@ -1,0 +1,25 @@
+<?php
+
+namespace {{ namespace }};
+
+use EscuelaIT\APIKit\CrudAction;
+use EscuelaIT\APIKit\ActionResult;
+
+class {{ class }} extends CrudAction
+{
+    protected function validationRules(): array {
+        return [
+            
+        ];
+    }
+
+    public function handle(): ActionResult
+    {
+        foreach($this->models as $model) {
+            
+        }
+        return $this->createActionResultSuccess('Action completed', [
+            
+        ]);
+    }
+}

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace EscuelaIT\APIKit;
 
-use EscuelaIT\APIKit\View\Components\CrudList;
 use Illuminate\Support\ServiceProvider;
+use EscuelaIT\APIKit\View\Components\CrudList;
+use EscuelaIT\APIKit\Console\Commands\MakeActionCommand;
 
 class APIKitServiceProvider extends ServiceProvider
 {
@@ -15,7 +16,14 @@ class APIKitServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'api-kit');
 
         if ($this->app->runningInConsole()) {
-            // Publish views
+            $this->commands([
+                MakeActionCommand::class,
+            ]);
+
+            $this->publishes([
+                __DIR__.'/Console/Commands/stubs' => base_path('stubs/vendor/api-kit'),
+            ], 'api-kit-stubs');
+            
             $this->publishes([
                 __DIR__.'/../resources/views' => resource_path('views/vendor/api-kit'),
             ], 'api-kit-views');
