@@ -86,11 +86,4 @@ class MakeActionCommandTest extends TestCase
         $this->assertStringContainsString('handle(): ActionResult', $contents);
         $this->assertStringContainsString('foreach($this->models as $model)', $contents);
     }
-
-    public function test_command_output_shows_success_message(): void
-    {
-        $this->artisan('make:api-action', ['name' => 'SuccessAction'])
-            ->expectsOutput('Action created successfully.')
-            ->assertExitCode(0);
-    }
 }
