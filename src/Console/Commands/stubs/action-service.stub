@@ -1,0 +1,11 @@
+<?php
+
+namespace {{ namespace }};
+
+{{ use_model }}use EscuelaIT\APIKit\ActionService;
+
+class {{ class }} extends ActionService
+{
+    protected string $actionModel{{ model_assignment }};
+    protected array $actionTypes = [];
+}

@@ -1,0 +1,11 @@
+<?php
+
+namespace {{ namespace }};
+
+{{ use_model }}
+use EscuelaIT\APIKit\ListService;
+
+class {{ class }} extends ListService
+{
+    protected string $listModel{{ model_assignment }};
+}
