@@ -33,10 +33,11 @@ class MakeActionServiceCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_creates_an_action_service_without_model(): void
+    public function testItCreatesAnActionServiceWithoutModel(): void
     {
         $this->artisan('make:api-action-service', ['name' => 'UserActionService'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/UserActionService.php');
         $this->assertFileExists($file);
@@ -50,13 +51,14 @@ class MakeActionServiceCommandTest extends TestCase
         $this->assertStringNotContainsString('use App\Models', $contents);
     }
 
-    public function test_it_creates_an_action_service_with_model(): void
+    public function testItCreatesAnActionServiceWithModel(): void
     {
         $this->artisan('make:api-action-service', [
             'name' => 'UserActionService',
             'model' => 'User',
         ])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/UserActionService.php');
         $this->assertFileExists($file);
@@ -71,13 +73,14 @@ class MakeActionServiceCommandTest extends TestCase
         $this->assertStringContainsString('use EscuelaIT\APIKit\ActionService;', $contents);
     }
 
-    public function test_it_creates_an_action_service_with_full_model_path(): void
+    public function testItCreatesAnActionServiceWithFullModelPath(): void
     {
         $this->artisan('make:api-action-service', [
             'name' => 'PostActionService',
             'model' => 'App\Models\Post',
         ])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/PostActionService.php');
         $this->assertFileExists($file);
@@ -88,19 +91,21 @@ class MakeActionServiceCommandTest extends TestCase
         $this->assertStringContainsString('protected string $actionModel = Post::class;', $contents);
     }
 
-    public function test_it_places_file_in_services_namespace(): void
+    public function testItPlacesFileInServicesNamespace(): void
     {
         $this->artisan('make:api-action-service', ['name' => 'TestActionService'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/TestActionService.php');
         $this->assertFileExists($file);
     }
 
-    public function test_it_includes_action_types_array(): void
+    public function testItIncludesActionTypesArray(): void
     {
         $this->artisan('make:api-action-service', ['name' => 'UserActionService'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/UserActionService.php');
         $contents = file_get_contents($file);

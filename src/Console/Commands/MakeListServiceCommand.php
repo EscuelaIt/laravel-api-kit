@@ -53,7 +53,7 @@ class MakeListServiceCommand extends GeneratorCommand
                 ['{{ use_model }}', '{{ model_assignment }}'],
                 [
                     "use {$modelPath};\n",
-                    ' = '.$modelBaseName.'::class'
+                    ' = '.$modelBaseName.'::class',
                 ],
                 $class
             );
@@ -68,7 +68,7 @@ class MakeListServiceCommand extends GeneratorCommand
 
     protected function qualifyModel(string $model): string
     {
-        $model = ltrim($model, '\\/');
+        $model = ltrim($model, '\/');
 
         $rootNamespace = $this->laravel->getNamespace();
 

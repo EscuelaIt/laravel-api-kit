@@ -33,10 +33,11 @@ class MakeActionCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_creates_an_action_class(): void
+    public function testItCreatesAnActionClass(): void
     {
         $this->artisan('make:api-action', ['name' => 'CreateUserAction'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Actions/CreateUserAction.php');
         $this->assertFileExists($file);
@@ -51,19 +52,21 @@ class MakeActionCommandTest extends TestCase
         $this->assertStringContainsString('public function handle(): ActionResult', $contents);
     }
 
-    public function test_it_places_file_in_actions_namespace(): void
+    public function testItPlacesFileInActionsNamespace(): void
     {
         $this->artisan('make:api-action', ['name' => 'DeletePostAction'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Actions/DeletePostAction.php');
         $this->assertFileExists($file);
     }
 
-    public function test_it_creates_action_with_nested_namespace(): void
+    public function testItCreatesActionWithNestedNamespace(): void
     {
         $this->artisan('make:api-action', ['name' => 'Admin/ManageUsersAction'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Actions/Admin/ManageUsersAction.php');
         $this->assertFileExists($file);
@@ -74,10 +77,11 @@ class MakeActionCommandTest extends TestCase
         $this->assertStringContainsString('class ManageUsersAction extends CrudAction', $contents);
     }
 
-    public function test_it_has_correct_structure(): void
+    public function testItHasCorrectStructure(): void
     {
         $this->artisan('make:api-action', ['name' => 'TestAction'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Actions/TestAction.php');
         $contents = file_get_contents($file);

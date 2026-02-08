@@ -33,10 +33,11 @@ class MakeListServiceCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_creates_a_list_service_without_model(): void
+    public function testItCreatesAListServiceWithoutModel(): void
     {
         $this->artisan('make:api-list-service', ['name' => 'UserListService'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/UserListService.php');
         $this->assertFileExists($file);
@@ -49,13 +50,14 @@ class MakeListServiceCommandTest extends TestCase
         $this->assertStringNotContainsString('use App\Models', $contents);
     }
 
-    public function test_it_creates_a_list_service_with_model(): void
+    public function testItCreatesAListServiceWithModel(): void
     {
         $this->artisan('make:api-list-service', [
             'name' => 'UserListService',
             'model' => 'User',
         ])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/UserListService.php');
         $this->assertFileExists($file);
@@ -69,13 +71,14 @@ class MakeListServiceCommandTest extends TestCase
         $this->assertStringContainsString('use EscuelaIT\APIKit\ListService;', $contents);
     }
 
-    public function test_it_creates_a_list_service_with_full_model_path(): void
+    public function testItCreatesAListServiceWithFullModelPath(): void
     {
         $this->artisan('make:api-list-service', [
             'name' => 'PostListService',
             'model' => 'App\Models\Post',
         ])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/PostListService.php');
         $this->assertFileExists($file);
@@ -86,10 +89,11 @@ class MakeListServiceCommandTest extends TestCase
         $this->assertStringContainsString('protected string $listModel = Post::class;', $contents);
     }
 
-    public function test_it_places_file_in_services_namespace(): void
+    public function testItPlacesFileInServicesNamespace(): void
     {
         $this->artisan('make:api-list-service', ['name' => 'TestListService'])
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+        ;
 
         $file = $this->app->basePath('app/Services/TestListService.php');
         $this->assertFileExists($file);

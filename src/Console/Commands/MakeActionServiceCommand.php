@@ -53,7 +53,7 @@ class MakeActionServiceCommand extends GeneratorCommand
                 ['{{ use_model }}', '{{ model_assignment }}'],
                 [
                     "use {$modelPath};\n",
-                    ' = '.$modelBaseName.'::class'
+                    ' = '.$modelBaseName.'::class',
                 ],
                 $class
             );
@@ -68,7 +68,7 @@ class MakeActionServiceCommand extends GeneratorCommand
 
     protected function qualifyModel(string $model): string
     {
-        $model = ltrim($model, '\\/');
+        $model = ltrim($model, '\/');
 
         $rootNamespace = $this->laravel->getNamespace();
 
