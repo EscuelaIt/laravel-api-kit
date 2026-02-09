@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace EscuelaIT\APIKit;
 
 use EscuelaIT\APIKit\Console\Commands\MakeActionCommand;
+use EscuelaIT\APIKit\Console\Commands\MakeActionControllerCommand;
 use EscuelaIT\APIKit\Console\Commands\MakeActionServiceCommand;
+use EscuelaIT\APIKit\Console\Commands\MakeListControllerCommand;
 use EscuelaIT\APIKit\Console\Commands\MakeListServiceCommand;
 use EscuelaIT\APIKit\View\Components\CrudList;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +24,8 @@ class APIKitServiceProvider extends ServiceProvider
                 MakeActionCommand::class,
                 MakeListServiceCommand::class,
                 MakeActionServiceCommand::class,
+                MakeListControllerCommand::class,
+                MakeActionControllerCommand::class,
             ]);
 
             $this->publishes([

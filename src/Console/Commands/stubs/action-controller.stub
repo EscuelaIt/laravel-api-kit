@@ -1,0 +1,17 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Http\Controllers\Controller;
+use EscuelaIT\APIKit\ActionHandler;
+{{ service_import }}
+
+class {{ class }} extends Controller
+{
+    use ActionHandler;
+
+    public function handle({{ service_class }} $service)
+    {
+        return $this->handleAction($service);
+    }
+}

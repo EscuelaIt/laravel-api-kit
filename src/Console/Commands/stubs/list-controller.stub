@@ -1,0 +1,22 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Http\Controllers\Controller;
+use EscuelaIT\APIKit\ResourceListable;
+{{ service_import }}
+
+class {{ class }} extends Controller
+{
+    use ResourceListable;
+
+    public function index({{ service_class }} $service)
+    {
+        return $this->list($service);
+    }
+
+    public function ids({{ service_class }} $service)
+    {
+        return $this->allIds($service);
+    }
+}
