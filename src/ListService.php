@@ -89,6 +89,15 @@ class ListService
         return $this->query->get();
     }
 
+    public function findIncluding($identifier)
+    {
+        $this->query = $this->createQuery();
+        $this->normalizeIncludes();
+        $this->applyIncludes();
+
+        return $this->query->where($this->identifierField, $identifier)->first();
+    }
+
     public function getAllIds()
     {
         $this->paginated = false;

@@ -490,4 +490,118 @@ class ListServiceTest extends TestCase
             $results['result']->every(fn ($post) => 'published' === $post->status)
         );
     }
+
+    #[Test]
+    public function itFindsSinglePostByIdentifier(): void
+    {
+        // Arrange: crear posts
+        $post1 = Post::factory()->create(['title' => 'Post 1', 'status' => 'published']);
+        $post2 = Post::factory()->create(['title' => 'Post 2', 'status' => 'draft']);
+        $post3 = Post::factory()->create(['title' => 'Post 3', 'status' => 'published']);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration([])
+        ;
+
+        // Act
+        $result = $service->findIncluding($post2->id);
+
+        // Assert
+        $this->assertNotNull($result);
+        $this->assertEquals($post2->id, $result->id);
+        $this->assertEquals('Post 2', $result->title);
+        $this->assertEquals('draft', $result->status);
+    }
+
+    #[Test]
+    public function itReturnsNullWhenPostNotFound(): void
+    {
+        // Arrange: crear posts
+        Post::factory()->count(3)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration([])
+        ;
+
+        // Act
+        $result = $service->findIncluding(999); // ID que no existe
+
+        // Assert
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function itFindsPostWithIncludedRelations(): void
+    {
+        // Arrange: crear post con comentarios
+        $post = Post::factory()->create(['title' => 'Post with Comments']);
+        Comment::factory()->count(3)->create(['post_id' => $post->id]);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableIncludes(['comments'])
+            ->setSearchConfiguration([
+                'include' => 'comments',
+            ])
+        ;
+
+        // Act
+        $result = $service->findIncluding($post->id);
+
+        // Assert
+        $this->assertNotNull($result);
+        $this->assertEquals($post->id, $result->id);
+        $this->assertTrue($result->relationLoaded('comments'));
+        $this->assertEquals(3, $result->comments->count());
+    }
+
+    #[Test]
+    public function itFindsPostWithoutIncludingNotAvailableRelations(): void
+    {
+        // Arrange: crear post con comentarios
+        $post = Post::factory()->create(['title' => 'Post with Comments']);
+        Comment::factory()->count(2)->create(['post_id' => $post->id]);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableIncludes(['other_relation'])  // No incluye 'comments'
+            ->setSearchConfiguration([
+                'include' => 'comments',
+            ])
+        ;
+
+        // Act
+        $result = $service->findIncluding($post->id);
+
+        // Assert
+        $this->assertNotNull($result);
+        $this->assertEquals($post->id, $result->id);
+        $this->assertFalse($result->relationLoaded('comments'));
+    }
+
+    #[Test]
+    public function itFindsPostWithStringIncludeParam(): void
+    {
+        // Arrange: crear post con comentarios
+        $post = Post::factory()->create(['title' => 'Post with Comments']);
+        Comment::factory()->count(1)->create(['post_id' => $post->id]);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableIncludes(['comments'])
+            ->setSearchConfiguration([
+                'include' => 'comments',  // String en lugar de array
+            ])
+        ;
+
+        // Act
+        $result = $service->findIncluding($post->id);
+
+        // Assert
+        $this->assertNotNull($result);
+        $this->assertTrue($result->relationLoaded('comments'));
+        $this->assertEquals(1, $result->comments->count());
+    }
 }

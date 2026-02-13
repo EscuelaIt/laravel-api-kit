@@ -36,7 +36,7 @@ class ResourceListableTest extends TestCase
         $service = \Mockery::mock(ListService::class);
         $service->shouldNotReceive('setSearchConfiguration');
 
-        APIResponse::shouldReceive('unprocessableEntity');
+        APIResponse::shouldReceive('badRequest');
 
         $this->resourceControllerClass->list($service);
     }
@@ -128,5 +128,91 @@ class ResourceListableTest extends TestCase
         ;
 
         $this->resourceControllerClass->list($service);
+    }
+
+    #[Test]
+    public function findIncludingReturnsValidationErrorsWithInvalidQueryStringParams(): void
+    {
+        $request = Request::create('/?include[0][name]=posts', 'GET');
+        $this->app->instance('request', $request);
+
+        $service = \Mockery::mock(ListService::class);
+        $service->shouldNotReceive('setSearchConfiguration');
+
+        APIResponse::shouldReceive('badRequest')
+            ->once()
+        ;
+
+        $this->resourceControllerClass->findIncluding(1, $service);
+    }
+
+    #[Test]
+    public function findIncludingReturnsOkWhenElementExists(): void
+    {
+        $request = Request::create('/?include[0]=posts', 'GET');
+        $this->app->instance('request', $request);
+
+        $identifier = 123;
+        $expectedElement = ['id' => 123, 'title' => 'Post'];
+
+        $service = \Mockery::mock(ListService::class);
+        $service->shouldReceive('setSearchConfiguration')
+            ->andReturnSelf()
+        ;
+
+        $service->shouldReceive('findIncluding')
+            ->andReturn($expectedElement)
+        ;
+
+        APIResponse::shouldReceive('ok')
+            ->once()
+            ->with($expectedElement)
+        ;
+
+        APIResponse::shouldNotReceive('notFound');
+        APIResponse::shouldNotReceive('badRequest');
+
+        $this->resourceControllerClass->findIncluding($identifier, $service);
+    }
+
+    #[Test]
+    public function findIncludingReturnsNotFoundWhenElementDoesNotExist(): void
+    {
+        $request = Request::create('/?include[0]=posts', 'GET');
+        $this->app->instance('request', $request);
+
+        $identifier = 123;
+
+        $expectedConfig = [
+            'perPage' => null,
+            'sortField' => null,
+            'sortDirection' => null,
+            'keyword' => null,
+            'filters' => null,
+            'belongsTo' => null,
+            'relationId' => null,
+            'include' => ['posts'],
+        ];
+
+        $service = \Mockery::mock(ListService::class);
+        $service->shouldReceive('setSearchConfiguration')
+            ->once()
+            ->with($expectedConfig)
+            ->andReturnSelf()
+        ;
+
+        $service->shouldReceive('findIncluding')
+            ->once()
+            ->with($identifier)
+            ->andReturn(null)
+        ;
+
+        APIResponse::shouldReceive('notFound')
+            ->once()
+        ;
+
+        APIResponse::shouldNotReceive('ok');
+
+        $this->resourceControllerClass->findIncluding($identifier, $service);
     }
 }

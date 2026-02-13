@@ -72,8 +72,9 @@ Thanks to implementing the `ResourceListable` trait in the controller, several u
 
 - `list()` method that returns model data in JSON, performing filtering and sorting of elements, as well as optional pagination.
 - `allIds()` method that allows obtaining the complete list of model identifiers given a query, once filters are applied. It's useful when you want to know all the elements that are part of a result set, regardless of pagination, to request batch actions on them.
+- `findIncluding()` method that returns JSON response with a single idenfified item or a not found response if the item is not found, including optional relationships.
 
-Both methods require receiving a service that allows detailed configuration of query aspects, such as the model to operate on or the types of filtering, among other things.
+All this methods require receiving a service that allows detailed configuration of query aspects, such as the model to operate on or the types of filtering, among other things.
 
 Below is an example of a controller that provides the functionalities offered by the trait:
 

@@ -21,17 +21,36 @@ trait ResourceListable
         'include.*' => 'string',
     ];
 
+    protected $findIncludingValidationRules = [
+        'include' => 'nullable',
+        'include.*' => 'string',
+    ];
+
     public function list(ListService $service)
     {
         $validator = $this->getValidator();
         if ($validator->fails()) {
-            return APIResponse::unprocessableEntity($validator->errors());
+            return APIResponse::badRequest($validator->errors());
         }
 
         $results = $service->setSearchConfiguration($this->getSearchConfiguration())->getResults();
         $countItems = $results['countItems'] ?? count($results);
 
         return APIResponse::ok($results, $countItems.' items found');
+    }
+
+    public function findIncluding($identifier, ListService $service)
+    {
+        $validator = $this->getValidatorFindIncluding();
+        if ($validator->fails()) {
+            return APIResponse::badRequest($validator->errors());
+        }
+        $element = $service->setSearchConfiguration($this->getSearchConfiguration())->findIncluding($identifier);
+        if ($element) {
+            return APIResponse::ok($element);
+        }
+
+        return APIResponse::notFound();
     }
 
     public function allIds(ListService $service)
@@ -49,6 +68,11 @@ trait ResourceListable
     private function getValidator()
     {
         return Validator::make(request()->all(), $this->listValidationRules);
+    }
+
+    private function getValidatorFindIncluding()
+    {
+        return Validator::make(request()->all(), $this->findIncludingValidationRules);
     }
 
     private function getSearchConfiguration()
