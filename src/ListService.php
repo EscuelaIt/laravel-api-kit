@@ -117,6 +117,15 @@ class ListService
         return $this;
     }
 
+    public function setSearchConfigurationValue(string $key, mixed $value): ListService
+    {
+        if (null !== $value) {
+            $this->searchConfiguration[$key] = $value;
+        }
+
+        return $this;
+    }
+
     protected function createQuery()
     {
         if (empty($this->listModel)) {

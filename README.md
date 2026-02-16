@@ -549,6 +549,38 @@ If `$availableIncludes` is set to `['comments']` but you request `?include=comme
 
 > **For enhanced security and performance, it's highly recommended to configure the `$availableIncludes` array in `ListService`** to prevent users from eager-loading potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
 
+### List Service methods
+
+#### setSearchConfigurationValue
+
+Sets a specific value in the search configuration array.
+
+**Description:**
+This method allows you to set individual properties of the `$searchConfiguration` array without needing to pass an entire array. It follows the fluent interface pattern, enabling method chaining with other service methods.
+
+**Parameters:**
+- `string $key` - The configuration property name to set (e.g., 'keyword', 'perPage', 'sortField')
+- `mixed $value` - The value to assign to the configuration property. If the value is `null`, it will not be set.
+
+**Returns:**
+`ListService` - Returns the service instance for method chaining.
+
+**Example Usage:**
+```php
+$listService = new ListService();
+$listService->setListModel(Post::class)
+    ->setSearchConfigurationValue('keyword', 'laravel')
+    ->setSearchConfigurationValue('perPage', 20)
+    ->setSearchConfigurationValue('sortField', 'created_at')
+    ->setSearchConfigurationValue('sortDirection', 'desc');
+
+$results = $listService->getResults();
+```
+
+- This method provides a convenient alternative to `setSearchConfiguration()` when setting a single value
+- Null values are ignored and will not update the configuration
+- This method supports method chaining for a fluent API
+
 ## Resource Actions
 
 Besides typical CRUD operations, applications often require additional behaviors to complete custom business operations. For example, for an invoice you might need an action to create a duplicate, or for a quote you might need an action to generate an invoice from it.
