@@ -206,7 +206,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```
 - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
   ```php
-  protected array $availableFilterColumns = ['is_admin', 'country'];
+  protected ?array $availableFilterColumns = ['is_admin', 'country'];
   ```
 - **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
   ```php
@@ -741,6 +741,18 @@ For example, this would restrict the `ActionService` to execute actions only on 
 protected function createQuery()
 {
     return User::where('is_admin', false);
+}
+```
+
+With the following code in the `createQuery()` method, you can ensure that the listed items always belong to the company associated with the current user.
+
+```php
+protected function createQuery()
+{
+    $user = Auth::user();
+    throw_if(is_null($user), AuthenticationException::class);
+    
+    return $this->listModel::query()->where('company_id', $user->company_id);
 }
 ```
 
