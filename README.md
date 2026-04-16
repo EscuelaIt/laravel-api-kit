@@ -587,13 +587,14 @@ Besides typical CRUD operations, applications often require additional behaviors
 
 Additionally, some of these operations sometimes need to be performed in batches. For example, marking a series of invoices as paid, or sending a notification to a series of users, without having to perform the same action one by one.
 
-For this purpose, resource actions exist.
+To simplify these functionalities, the Laravel Api Kit package provides resource actions, a consistent way to handle common API operations for resources.
 
 To build these actions, we need to define a couple of components:
 
 - A single controller to receive all action execution requests on a model in a unified way.
 - A service that defines how actions should be executed, indicating which model they operate on, what actions are possible, etc.
-- The action itself, which contains the code with the necessary logic to execute it. Each action is resolved in its own dedicated class that implements it.
+
+Additionally, configuring the actions requires defining the action itself, which contains the logic needed for its execution. Each action is implemented in its own dedicated class.
 
 ### Action Controller
 
@@ -752,7 +753,7 @@ protected function createQuery()
     $user = Auth::user();
     throw_if(is_null($user), AuthenticationException::class);
     
-    return $this->listModel::query()->where('company_id', $user->company_id);
+    return $this->actionModel::query()->where('company_id', $user->company_id);
 }
 ```
 
