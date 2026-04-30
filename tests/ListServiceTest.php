@@ -584,7 +584,6 @@ class ListServiceTest extends TestCase
     #[Test]
     public function itFindsPostWithStringIncludeParam(): void
     {
-        // Arrange: crear post con comentarios
         $post = Post::factory()->create(['title' => 'Post with Comments']);
         Comment::factory()->count(1)->create(['post_id' => $post->id]);
 
@@ -592,7 +591,7 @@ class ListServiceTest extends TestCase
             ->setListModel(Post::class)
             ->setAvailableIncludes(['comments'])
             ->setSearchConfiguration([
-                'include' => 'comments',  // String en lugar de array
+                'include' => 'comments',  
             ])
         ;
 
@@ -604,4 +603,47 @@ class ListServiceTest extends TestCase
         $this->assertTrue($result->relationLoaded('comments'));
         $this->assertEquals(1, $result->comments->count());
     }
+
+
+    #[Test]
+    public function itReturnsAllIds(): void
+    {
+        // Arrange: crear posts
+        $post1 = Post::factory()->create(['title' => 'Post 1', 'status' => 'published']);
+        $post2 = Post::factory()->create(['title' => 'Post 2', 'status' => 'draft']);
+        $post3 = Post::factory()->create(['title' => 'Post 3', 'status' => 'published']);
+
+        $service = (new \EscuelaIT\APIKit\ListService())
+            ->setListModel(Post::class);
+
+        // Act
+        $ids = $service->getAllIds();
+
+        // Assert
+        $this->assertCount(3, $ids);
+        $this->assertContains($post1->id, $ids);
+        $this->assertContains($post2->id, $ids);
+        $this->assertContains($post3->id, $ids);
+    }
+
+    #[Test]
+    public function itLimitsIdsToMaxIds(): void
+    {
+        // Arrange: crear posts
+        $post1 = Post::factory()->create(['title' => 'Post 1', 'status' => 'published']);
+        $post2 = Post::factory()->create(['title' => 'Post 2', 'status' => 'draft']);
+        $post3 = Post::factory()->create(['title' => 'Post 3', 'status' => 'published']);
+
+        $service = (new \EscuelaIT\APIKit\ListService())
+            ->setListModel(\EscuelaIT\Test\Fixtures\Post::class)
+            ->setMaxIds(1);
+
+        // Act
+        $ids = $service->getAllIds();
+
+        // Assert
+        $this->assertCount(1, $ids);
+        // El id devuelto debe ser uno de los creados
+        $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
+    }    
 }

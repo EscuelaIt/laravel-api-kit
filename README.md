@@ -218,6 +218,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
+- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
 
 ### QueryString Configurations for Listing Operations
 

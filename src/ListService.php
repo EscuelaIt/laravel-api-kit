@@ -18,6 +18,7 @@ class ListService
     protected ?array $availableIncludes = null;
     protected ?int $maxPerPage = null;
     protected ?int $maxFilters = null;
+    protected ?int $maxIds = 100;
     protected array $searchConfiguration = [
         'perPage' => 10,
         'sortField' => null,
@@ -103,7 +104,12 @@ class ListService
         $this->paginated = false;
         $this->getResults();
 
-        return $this->query->get()->pluck($this->identifierField);
+        $query = $this->query;
+        if ($this->maxIds !== null) {
+            $query = $query->limit($this->maxIds);
+        }
+
+        return $query->get()->pluck($this->identifierField);
     }
 
     public function setSearchConfiguration(array $config): ListService
