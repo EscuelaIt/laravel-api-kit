@@ -72,6 +72,13 @@ class ListService
         return $this;
     }
 
+    public function setMaxIds(?int $maxIds): ListService
+    {
+        $this->maxIds = $maxIds;
+
+        return $this;
+    }
+
     public function getResults()
     {
         $this->query = $this->createQuery();
