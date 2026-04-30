@@ -591,7 +591,7 @@ class ListServiceTest extends TestCase
             ->setListModel(Post::class)
             ->setAvailableIncludes(['comments'])
             ->setSearchConfiguration([
-                'include' => 'comments',  
+                'include' => 'comments',
             ])
         ;
 
@@ -604,7 +604,6 @@ class ListServiceTest extends TestCase
         $this->assertEquals(1, $result->comments->count());
     }
 
-
     #[Test]
     public function itReturnsAllIds(): void
     {
@@ -613,8 +612,9 @@ class ListServiceTest extends TestCase
         $post2 = Post::factory()->create(['title' => 'Post 2', 'status' => 'draft']);
         $post3 = Post::factory()->create(['title' => 'Post 3', 'status' => 'published']);
 
-        $service = (new \EscuelaIT\APIKit\ListService())
-            ->setListModel(Post::class);
+        $service = (new ListService())
+            ->setListModel(Post::class)
+        ;
 
         // Act
         $ids = $service->getAllIds();
@@ -634,9 +634,10 @@ class ListServiceTest extends TestCase
         $post2 = Post::factory()->create(['title' => 'Post 2', 'status' => 'draft']);
         $post3 = Post::factory()->create(['title' => 'Post 3', 'status' => 'published']);
 
-        $service = (new \EscuelaIT\APIKit\ListService())
-            ->setListModel(\EscuelaIT\Test\Fixtures\Post::class)
-            ->setMaxIds(1);
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setMaxIds(1)
+        ;
 
         // Act
         $ids = $service->getAllIds();
@@ -645,5 +646,5 @@ class ListServiceTest extends TestCase
         $this->assertCount(1, $ids);
         // El id devuelto debe ser uno de los creados
         $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
-    }    
+    }
 }

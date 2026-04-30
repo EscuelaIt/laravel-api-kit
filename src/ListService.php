@@ -112,7 +112,7 @@ class ListService
         $this->getResults();
 
         $query = $this->query;
-        if ($this->maxIds !== null) {
+        if (null !== $this->maxIds) {
             $query = $query->limit($this->maxIds);
         }
 
