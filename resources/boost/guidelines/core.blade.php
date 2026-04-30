@@ -1,6 +1,8 @@
 ## Escuela IT Laravel API Kit
 
-escuelait/laravel-api-kit provides a structured, service-based approach to building RESTful APIs with resource listing, filtering, pagination, and response adaptation.
+escuelait/laravel-api-kit provides a structured, service-based approach to building RESTful APIs with resource listing, filtering, pagination, and response adaptation. 
+
+It also provides a simple mechanism to execute batch actions on resource items, streamlining the validation of data required to execute the actions and the access to the involved models.
 
 ### Core Concepts
 
@@ -8,54 +10,10 @@ escuelait/laravel-api-kit provides a structured, service-based approach to build
 
 **ResourceListable Trait**: Used in controllers to delegate list operations to a ListService, keeping controllers thin and focused.
 
-### Quick Start
+**ActionService**: Service to configuring the action execution system.
 
-#### Creating a ListService
+**ActionHandler trait**: which is responsible for invoking the requested action and passing the required data.
 
-@verbatim
-<code-snippet name="Implement a ListService" lang="php">
-<?php
+**Actions**: Classes yo define particular behaviors for each type of action
 
-namespace App\Services\ListServices;
-
-use App\Models\EmailList;
-use EscuelaIT\APIKit\ListService;
-
-class YourListService extends ListService
-{
-    protected string $listModel = Your::class;
-
-    protected function applyKeywordFilter(?string $keyword): void 
-    {
-        $this->query->similar($keyword);
-    }
-}
-</code-snippet>
-@endverbatim
-
-#### Using ResourceListable in Controllers
-
-@verbatim
-<code-snippet name="Controller with ResourceListable trait" lang="php">
-<?php
-
-namespace App\Http\Controllers;
-
-use App\Services\ListServices\YourListService;
-use EscuelaIT\APIKit\ResourceListable;
-
-class ListYourController extends Controller
-{
-    use ResourceListable;
-
-    public function index(YourListService $service)
-    {
-        return $this->list($service);
-    }
-}
-</code-snippet>
-@endverbatim
-
-### Best Practices
-
-- **Keyword Filtering**: Always implement `applyKeywordFilter()` to enable user searches in ListServices
+Always activate the `laravel-api-kit-development` skill when working with resource listing or resource action endpoints.

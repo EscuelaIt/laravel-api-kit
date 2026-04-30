@@ -384,22 +384,22 @@ class EuropeFilter extends CustomFilter
 The class must define a `$filterName` property with the filter’s name and an `apply()` method that receives an `Illuminate\Database\Eloquent\Builder` instance:
 
 ```php
-class EuropeFilter extends CustomFilter
+class SpanishOrBrazilianFilter extends CustomFilter
 {
-    protected $filterName = 'europe';
+    protected $filterName = 'hispanic_brazilian';
 
     public function apply(Builder $query): void
     {
         $query->where(function (Builder $subQuery) {
             $subQuery
-                ->where('country', 'Spain')
-                ->orWhere('country', 'France');
+                ->where('nationality', 'Spanish')
+                ->orWhere('nationality', 'Brazilian');
         });
     }
 }
 ```
 
-The above filter would restrict results to items where `country` is Spain or France.
+The above filter would restrict results to items where `nationality` is Spanish or Brazilian.
 
 To access the filter value from QueryString, use `getFilterValue()`:
 
@@ -764,10 +764,10 @@ To define particular behaviors for each type of action, we use action classes. A
 
 The `ActionHandler` trait will call the corresponding action, deduced from the `type` value and according to the corresponding class in the `$actionTypes` array of the `ActionService`.
 
-When building the action, three pieces of data will be passed:
+When building the action, three pieces of data will be available:
 
 - The user authenticated in this request, or `null` if none exists. This user will be stored as the `$user` property.
-- The model identifiers, which will be used to query the database and build the collection of related models based on the query, available in the `$models` property.
+- The related models based on the query, available in the `$models` property.
 - The data sent in the request to the controller in the `data` field of the payload. This data will be available in the `$data` property.
 
 With this data, an action can be defined as shown in the following example:
