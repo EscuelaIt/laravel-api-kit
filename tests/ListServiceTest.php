@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EscuelaIT\Test;
 
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\Test\Filters\TitleContainsFilter;
 use EscuelaIT\Test\Fixtures\Comment;
@@ -646,5 +647,112 @@ class ListServiceTest extends TestCase
         $this->assertCount(1, $ids);
         // El id devuelto debe ser uno de los creados
         $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
+    }
+
+    #[Test]
+    public function itThrowsExceptionWhenRequiredScopeIsMissing(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                // Note: No 'belongsTo' set
+            ])
+        ;
+
+        // Assert
+        $this->expectException(MissingRequiredScopeException::class);
+
+        // Act
+        $service->getResults();
+    }
+
+    #[Test]
+    public function itThrowsExceptionWhenRequiredScopeDoesNotMatch(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                'belongsTo' => 'otherScope',  // Different scope
+                'relationId' => 2,
+            ])
+        ;
+
+        // Assert
+        $this->expectException(MissingRequiredScopeException::class);
+
+        // Act
+        $service->getResults();
+    }
+
+    #[Test]
+    public function itAppliesResultsWhenRequiredScopeIsProvided(): void
+    {
+        // Arrange
+        Post::factory()->create(['id' => 1, 'title' => 'Post 1']);
+        Post::factory()->create(['id' => 2, 'title' => 'Post 2']);
+        Post::factory()->create(['id' => 3, 'title' => 'Post 3']);
+        Post::factory()->create(['id' => 4, 'title' => 'Post 4']);
+        Post::factory()->create(['id' => 5, 'title' => 'Post 5']);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                'belongsTo' => 'greaterThanId',
+                'relationId' => 2,
+            ])
+        ;
+
+        // Act
+        $results = $service->getResults();
+
+        // Assert
+        $this->assertEquals(3, $results['countItems']); // Posts 3, 4, 5
+        $this->assertCount(3, $results['result']);
+        $this->assertTrue(
+            $results['result']->every(fn ($post) => $post->id > 2)
+        );
+    }
+
+    #[Test]
+    public function itDoesNotValidateWhenRequiredScopeIsNull(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            // Note: No setRequiredScope() call - defaults to null
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                // Note: No 'belongsTo' set
+            ])
+        ;
+
+        // Act
+        $results = $service->getResults();
+
+        // Assert - should not throw exception and return all results
+        $this->assertEquals(5, $results['countItems']);
+        $this->assertCount(5, $results['result']);
     }
 }

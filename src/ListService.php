@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EscuelaIT\APIKit;
 
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
 use Illuminate\Support\Str;
 
 class ListService
@@ -29,6 +30,7 @@ class ListService
         'belongsTo' => null,
         'relationId' => null,
     ];
+    protected ?string $requiredScope = null;
 
     public function setListModel(string $modelClass): ListService
     {
@@ -79,8 +81,16 @@ class ListService
         return $this;
     }
 
+    public function setRequiredScope(?string $scopeName): ListService
+    {
+        $this->requiredScope = $scopeName;
+
+        return $this;
+    }
+
     public function getResults()
     {
+        $this->validateRequiredScope();
         $this->query = $this->createQuery();
         $this->applyKeywordFilter($this->searchConfiguration['keyword']);
         $this->normalizeFilters();
@@ -146,6 +156,17 @@ class ListService
         }
 
         return $this->listModel::query();
+    }
+
+    protected function validateRequiredScope(): void
+    {
+        if (null === $this->requiredScope) {
+            return;
+        }
+
+        if ($this->searchConfiguration['belongsTo'] !== $this->requiredScope) {
+            throw new MissingRequiredScopeException($this->requiredScope);
+        }
     }
 
     protected function applyKeywordFilter(?string $keyword): void
