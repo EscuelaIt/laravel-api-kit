@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace EscuelaIT\APIKit;
 
+use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
 use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class ListService
@@ -147,6 +151,49 @@ class ListService
         }
 
         return $this;
+    }
+
+    /**
+     * Wraps a plain Collection of models (result of getResults() with paginated=false)
+     * into a Resource collection. The Resource collection is returned unresolved,
+     * the same way models are returned unserialized today.
+     */
+    public function wrapCollection(Collection $items, string $resourceClass): AnonymousResourceCollection
+    {
+        $this->validateResourceClass($resourceClass);
+
+        return $resourceClass::collection($items);
+    }
+
+    /**
+     * Wraps the paginated array returned by getResults() (['countItems' => ..., 'result' => Paginator])
+     * preserving pagination metadata.
+     */
+    public function wrapPaginated(array $results, string $resourceClass): array
+    {
+        $this->validateResourceClass($resourceClass);
+
+        $results['result'] = $results['result']->through(
+            fn ($item) => new $resourceClass($item)
+        );
+
+        return $results;
+    }
+
+    /**
+     * Wraps a single model (result of findIncluding()). Passes through null untouched.
+     *
+     * @param mixed $model
+     */
+    public function wrapModel($model, string $resourceClass)
+    {
+        if (null === $model) {
+            return null;
+        }
+
+        $this->validateResourceClass($resourceClass);
+
+        return new $resourceClass($model);
     }
 
     protected function createQuery()
@@ -309,6 +356,13 @@ class ListService
                 throw new \InvalidArgumentException('Filter must extends CustomFilter class');
             }
             $filter->applyCustomFilter($this->query, $this->searchConfiguration);
+        }
+    }
+
+    private function validateResourceClass(string $resourceClass): void
+    {
+        if (!is_subclass_of($resourceClass, JsonResource::class)) {
+            throw new InvalidResourceClassException($resourceClass);
         }
     }
 

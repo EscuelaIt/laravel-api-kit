@@ -213,6 +213,35 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
 - **`$searchConfiguration`** Es un array de datos de configuración de la búsqueda en los listados que está pensado para personalizar de manera fina las búsquedas con múltiples parámetros. Esta propiedad en el `ListService` almacena inicialmente la configuración predeterminada y existe un método `setSearchConfiguration()` que permite enviarle una configuración personalizada para un listado en particular, que hace un merge de los datos predeterminados y los nuevos datos pasados al método.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 
+### Envolver resultados en un JsonResource
+
+`getResults()` y `findIncluding()` siempre devuelven modelos Eloquent puros (o, si está paginado, un paginador de modelos) — esto nunca cambia según la configuración. Si quieres obtener el mismo formato de salida que ya usa tu API HTTP (por ejemplo, reutilizando `InvoiceResource` desde un comando de consola, un job en cola o una tool MCP), `ListService` ofrece tres métodos explícitos para envolver los resultados en un `Illuminate\Http\Resources\Json\JsonResource` **después** de obtenerlos:
+
+- **`wrapCollection(Collection $items, string $resourceClass)`** Envuelve una `Collection` (resultado de `getResults()` con `$paginated = false`) llamando a `$resourceClass::collection(...)`.
+- **`wrapPaginated(array $results, string $resourceClass)`** Envuelve el array paginado devuelto por `getResults()` (`['countItems' => ..., 'result' => $paginator]`), preservando la metadata de paginación gracias a `AbstractPaginator::through()`.
+- **`wrapModel($model, string $resourceClass)`** Envuelve un único modelo (resultado de `findIncluding()`). Si `$model` es `null` (no encontrado), se devuelve tal cual, sin envolver.
+
+```php
+$service = new InvoiceListService();
+
+// Listado paginado
+$results = $service->getResults();
+$results = $service->wrapPaginated($results, InvoiceResource::class);
+
+// Listado sin paginar
+$service->setPaginated(false);
+$items = $service->getResults();
+$items = $service->wrapCollection($items, InvoiceResource::class);
+
+// Un único elemento
+$model = $service->findIncluding($id);
+$resource = $service->wrapModel($model, InvoiceResource::class);
+```
+
+Los resources se devuelven **sin resolver** (dentro de `ListService` no se llama a `->resolve()`/`->toArray()`), igual que hoy los modelos se devuelven sin serializar — resolverlos a una respuesta queda en manos del consumidor (un controlador que los devuelve desde una acción, o una llamada explícita a `->resolve()` en otro punto).
+
+Si `$resourceClass` no extiende `Illuminate\Http\Resources\Json\JsonResource`, se lanza inmediatamente una excepción `InvalidResourceClassException`.
+
 ### Configuraciones en el QueryString de la URL de la operación del listado
 
 

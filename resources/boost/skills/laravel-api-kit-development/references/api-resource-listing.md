@@ -30,6 +30,21 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
 
+### Wrapping results in a JsonResource
+
+`getResults()` and `findIncluding()` always return raw Eloquent models (or a paginator of models when paginated) — this never changes based on configuration. To reuse an existing `JsonResource` (e.g. the same one your HTTP API uses) from any consumer — a console command, a queued job, an MCP tool — call one of these explicit helpers **after** fetching results:
+
+- **`wrapCollection(Collection $items, string $resourceClass)`** Wraps a plain `Collection` (`getResults()` with `$paginated = false`) via `$resourceClass::collection(...)`.
+- **`wrapPaginated(array $results, string $resourceClass)`** Wraps the paginated array (`['countItems' => ..., 'result' => $paginator]`), preserving pagination metadata via `AbstractPaginator::through()`.
+- **`wrapModel($model, string $resourceClass)`** Wraps a single model (`findIncluding()`); passes `null` through untouched when not found.
+
+```php
+$results = $service->getResults();
+$results = $service->wrapPaginated($results, InvoiceResource::class);
+```
+
+Resources are returned unresolved (no `->resolve()`/`->toArray()` is called inside `ListService`), matching how models are returned unserialized today. If `$resourceClass` doesn't extend `Illuminate\Http\Resources\Json\JsonResource`, an `InvalidResourceClassException` is thrown immediately.
+
 ### ListService configuration via method overriding
 
 - **`applyKeywordFilter(?string $keyword)`** Enable keyword filtering it in the `ListService` by overriding the `applyKeywordFilter()` method.

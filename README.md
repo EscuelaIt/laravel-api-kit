@@ -228,6 +228,35 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```
   When `$requiredScope` is set to `'byTeam'`, every listing request must include `belongsTo=byTeam` in the QueryString, or an exception will be thrown.
 
+### Wrapping Results in a JsonResource
+
+`getResults()` and `findIncluding()` always return raw Eloquent models (or, when paginated, a paginator of models) — this never changes based on configuration. If you want the same output shape your HTTP API already returns (e.g. reusing `InvoiceResource` from a console command, a queued job, or an MCP tool), `ListService` provides three explicit helper methods to wrap results into a `Illuminate\Http\Resources\Json\JsonResource` **after** fetching them:
+
+- **`wrapCollection(Collection $items, string $resourceClass)`** Wraps a plain `Collection` (result of `getResults()` with `$paginated = false`) into a `$resourceClass::collection(...)` call.
+- **`wrapPaginated(array $results, string $resourceClass)`** Wraps the paginated array returned by `getResults()` (`['countItems' => ..., 'result' => $paginator]`), preserving pagination metadata via `AbstractPaginator::through()`.
+- **`wrapModel($model, string $resourceClass)`** Wraps a single model (result of `findIncluding()`). If `$model` is `null` (not found), it's returned untouched.
+
+```php
+$service = new InvoiceListService();
+
+// Paginated listing
+$results = $service->getResults();
+$results = $service->wrapPaginated($results, InvoiceResource::class);
+
+// Non-paginated listing
+$service->setPaginated(false);
+$items = $service->getResults();
+$items = $service->wrapCollection($items, InvoiceResource::class);
+
+// Single item
+$model = $service->findIncluding($id);
+$resource = $service->wrapModel($model, InvoiceResource::class);
+```
+
+The resources are returned **unresolved** (no `->resolve()`/`->toArray()` call happens inside `ListService`), the same way models are returned unserialized today — resolving them to a response is left to the consumer (a controller returning them from an action, or an explicit `->resolve()` call elsewhere).
+
+If `$resourceClass` doesn't extend `Illuminate\Http\Resources\Json\JsonResource`, an `InvalidResourceClassException` is thrown immediately.
+
 ### QueryString Configurations for Listing Operations
 
 When working with the `ResourceListable` trait, listing configurations are retrieved from QueryString variables (sent via the URL). These configurations are automatically passed to the `ListService` to customize its behavior. This approach makes it easy to introduce numerous listing customizations that can change with each resource listing request.
