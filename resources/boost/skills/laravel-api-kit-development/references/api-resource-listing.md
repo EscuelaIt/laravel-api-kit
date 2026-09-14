@@ -29,6 +29,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings. Usually, it is not necessary to set this array manually, as the ResourceListable trait handles it based on the request made to the controller.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
+- **`$requiredScope`** Forces the listing to always be scoped via `belongsTo`/`relationId`, preventing unscoped access to the full listing. The default value is `null`, meaning no scope is required. When set to a scope name, `getResults()` throws a `MissingRequiredScopeException` unless the request's `belongsTo` value matches exactly. Set it with the `setRequiredScope(?string $scopeName)` method (not directly as a property) — see [Requiring a scope](#requiring-a-scope) below.
 
 ### Wrapping results in a JsonResource
 
@@ -208,6 +209,26 @@ public function scopeByTeam($query, $teamId) {
     });
 }
 ```
+
+### Requiring a scope
+
+By default, `belongsTo`/`relationId` are optional: if the client omits them, the listing simply returns all matching rows. To **force** a listing to always be scoped — e.g. a nested route like `/teams/{team}/users` that should never expose the unscoped user list — call `setRequiredScope(string $scopeName)` on the service.
+
+```php
+$service = (new UserListService())
+    ->setListModel(User::class)
+    ->setRequiredScope('byTeam')
+    ->setSearchConfiguration([
+        'belongsTo' => 'byTeam',
+        'relationId' => $teamId,
+    ]);
+```
+
+When a required scope is set, `getResults()` validates it before running the query:
+
+- If `belongsTo` is missing or doesn't match `$requiredScope` exactly, a `MissingRequiredScopeException` is thrown.
+- If `belongsTo` matches `$requiredScope`, the listing proceeds normally, applying the scope as described above.
+- If `$requiredScope` is left as `null` (the default), no validation is performed.
 
 ### "include" Configuration
 
