@@ -266,7 +266,7 @@ Keep these points in mind when using a resource:
 
 - **Hiding the `id`:** removing it from the resource does not hide it everywhere.
   - `allIds()` does not use the resource and returns the values of `$identifierField`, so set that property to another field, such as `uuid`.
-  - Clients can still use `sortField=id`, and can filter by `id` unless `$availableFilterColumns` excludes it.
+  - Clients can still sort by `id` unless `$availableSortFields` excludes it, and filter by `id` unless `$availableFilterColumns` excludes it.
 - **`include`:** requested relationships only appear in the output if the resource returns them. Use `whenLoaded()`, ideally with a resource for the relationship. If you use `parent::toArray($request)`, loaded relationships are serialized in full, including their ids and foreign keys:
   ```php
   'comments' => CommentResource::collection($this->whenLoaded('comments')),
@@ -300,6 +300,14 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
+  ```
+- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `null`, allowing sorting by any field. Any other field is ignored without raising an error, and the listing is returned without that ordering. For security reasons, it's recommended to explicitly restrict this array to only the fields that should be sortable, e.g.:  
+  ```php
+  protected ?array $availableSortFields = ['name', 'created_at'];
+  ```
+  You can also configure this using the `setAvailableSortFields()` method:  
+  ```php
+  $service->setAvailableSortFields(['name', 'created_at']);
   ```
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
@@ -369,7 +377,7 @@ These two configurations together define the order of search results.
 example.com/users?sortField=name&sortDirection=desc
 ```
 
-You can specify any model field to achieve the desired listing order.
+You can specify any model field to achieve the desired listing order, unless `$availableSortFields` restricts the allowed fields.
 
 Valid `sortDirection` values are `"asc"` (ascending) and `"desc"` (descending).
 

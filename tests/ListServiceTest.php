@@ -652,6 +652,72 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
+    public function itSortsByAnyFieldWhenAvailableSortFieldsIsNotConfigured(): void
+    {
+        Post::factory()->create(['title' => 'A']);
+        Post::factory()->create(['title' => 'B']);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration(['sortField' => 'title', 'sortDirection' => 'desc'])
+            ->getResults()
+        ;
+
+        $this->assertSame('B', $results['result'][0]->title);
+    }
+
+    #[Test]
+    public function itSortsByFieldIncludedInAvailableSortFields(): void
+    {
+        Post::factory()->create(['title' => 'A']);
+        Post::factory()->create(['title' => 'B']);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableSortFields(['title'])
+            ->setSearchConfiguration(['sortField' => 'title', 'sortDirection' => 'desc'])
+            ->getResults()
+        ;
+
+        $this->assertSame('B', $results['result'][0]->title);
+    }
+
+    #[Test]
+    public function itIgnoresSortFieldNotIncludedInAvailableSortFields(): void
+    {
+        Post::factory()->create(['title' => 'A']);
+        Post::factory()->create(['title' => 'B']);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableSortFields(['status'])
+            ->setSearchConfiguration(['sortField' => 'title', 'sortDirection' => 'desc'])
+            ->getResults()
+        ;
+
+        $this->assertSame('A', $results['result'][0]->title);
+    }
+
+    #[Test]
+    public function itIgnoresAllSortFieldsWhenAvailableSortFieldsIsEmpty(): void
+    {
+        Post::factory()->create(['title' => 'A']);
+        Post::factory()->create(['title' => 'B']);
+
+        $service = new class extends ListService {
+            protected string $listModel = Post::class;
+            protected ?array $availableSortFields = [];
+        };
+
+        $results = $service
+            ->setSearchConfiguration(['sortField' => 'title', 'sortDirection' => 'desc'])
+            ->getResults()
+        ;
+
+        $this->assertSame('A', $results['result'][0]->title);
+    }
+
+    #[Test]
     public function itDoesNotWrapResultsWhenNoResourceIsConfigured(): void
     {
         Post::factory()->create();

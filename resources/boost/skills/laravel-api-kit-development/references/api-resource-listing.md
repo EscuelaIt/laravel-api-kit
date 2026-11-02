@@ -27,6 +27,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array
 - **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array.
 - **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable.
+- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `null`, allowing sorting by any field. Any other field is ignored without raising an error. For security reasons, it's recommended to explicitly restrict this array.
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings. Usually, it is not necessary to set this array manually, as the ResourceListable trait handles it based on the request made to the controller.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
@@ -184,7 +185,7 @@ class UserListService extends ListService
 ```
 
 - `allIds()` does not use the resource and returns the values of `$identifierField`. To avoid exposing ids, set that property to another field, such as `uuid`.
-- Clients can still use `sortField=id`, and can filter by `id` unless `$availableFilterColumns` excludes it.
+- Clients can still sort by `id` unless `$availableSortFields` excludes it, and filter by `id` unless `$availableFilterColumns` excludes it.
 - Use `whenLoaded()` for relationships. Requested includes do not appear if the resource omits them, and `parent::toArray($request)` serializes them in full, including ids and foreign keys.
 - Accessing a relationship that is not loaded runs one extra query per item. Load it with `with()` in `createQuery()`, or use `whenLoaded()`.
 

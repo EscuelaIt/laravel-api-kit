@@ -19,6 +19,7 @@ class ListService
     protected ?array $availableFilterColumns = null;
     protected ?array $availableScopes = null;
     protected ?array $availableIncludes = null;
+    protected ?array $availableSortFields = null;
     protected ?int $maxPerPage = null;
     protected ?int $maxFilters = null;
     protected ?int $maxIds = 100;
@@ -64,6 +65,13 @@ class ListService
     public function setAvailableIncludes(?array $includes): ListService
     {
         $this->availableIncludes = $includes;
+
+        return $this;
+    }
+
+    public function setAvailableSortFields(?array $sortFields): ListService
+    {
+        $this->availableSortFields = $sortFields;
 
         return $this;
     }
@@ -275,6 +283,15 @@ class ListService
         return true;
     }
 
+    protected function isSortFieldAllowed(string $sortField): bool
+    {
+        if (null !== $this->availableSortFields) {
+            return in_array($sortField, $this->availableSortFields);
+        }
+
+        return true;
+    }
+
     protected function applyScope($scopeName, $data): void
     {
         $method = 'scope'.Str::studly($scopeName);
@@ -350,7 +367,7 @@ class ListService
 
     private function applyOrder(): void
     {
-        if ($this->searchConfiguration['sortField']) {
+        if ($this->searchConfiguration['sortField'] && $this->isSortFieldAllowed($this->searchConfiguration['sortField'])) {
             $this->query->orderBy($this->searchConfiguration['sortField'], $this->searchConfiguration['sortDirection']);
         }
     }

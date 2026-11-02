@@ -260,7 +260,7 @@ Ten en cuenta estos puntos al usar un resource:
 
 - **Ocultar el `id`:** quitarlo del resource no lo oculta en todas partes.
   - `allIds()` no usa el resource y devuelve los valores de `$identifierField`, así que configura esa propiedad con otro campo, como `uuid`.
-  - Los clientes aún pueden usar `sortField=id`, y filtrar por `id` salvo que `$availableFilterColumns` lo excluya.
+  - Los clientes aún pueden ordenar por `id` salvo que `$availableSortFields` lo excluya, y filtrar por `id` salvo que `$availableFilterColumns` lo excluya.
 - **`include`:** las relaciones solicitadas solo aparecen en la salida si el resource las devuelve. Usa `whenLoaded()`, idealmente con un resource para la relación. Si usas `parent::toArray($request)`, las relaciones cargadas se serializan completas, incluidos sus ids y claves foráneas:
   ```php
   'comments' => CommentResource::collection($this->whenLoaded('comments')),
@@ -294,6 +294,14 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
 - **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
+  ```
+- **`$availableSortFields`** Indica qué campos se pueden usar para ordenar mediante la variable `sortField` del QueryString. El valor predeterminado es `null`, lo que permite ordenar por cualquier campo. Cualquier otro campo se ignora sin lanzar un error, y el listado se devuelve sin ese orden. Por seguridad se recomienda limitar este array a los campos que se deban poder ordenar:
+  ```php
+  protected ?array $availableSortFields = ['name', 'created_at'];
+  ```
+  También se puede configurar con el método `setAvailableSortFields()`:
+  ```php
+  $service->setAvailableSortFields(['name', 'created_at']);
   ```
 - **`$searchConfiguration`** Es un array de datos de configuración de la búsqueda en los listados que está pensado para personalizar de manera fina las búsquedas con múltiples parámetros. Esta propiedad en el `ListService` almacena inicialmente la configuración predeterminada y existe un método `setSearchConfiguration()` que permite enviarle una configuración personalizada para un listado en particular, que hace un merge de los datos predeterminados y los nuevos datos pasados al método.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
@@ -364,7 +372,7 @@ Estas dos configuraciones en conjunto permiten definir el órden de los resultad
 example.com/users?sortField=name&sortDirection=desc
 ```
 
-Puedes indicar cualquier campo del modelo para conseguir que el orden deseado en el listado.
+Puedes indicar cualquier campo del modelo para conseguir que el orden deseado en el listado, salvo que `$availableSortFields` limite los campos permitidos.
 
 Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente.
 
