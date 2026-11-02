@@ -21,7 +21,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 
 - **`$listModel`** Defines the model class used for the listing.  
 - **`$listResource`** Defines the Laravel `JsonResource` class applied to each item returned by `list()` and `findIncluding()`. The default value is `null`, meaning the models are returned as they are. See "Transforming items with a Laravel resource".
-- **`$identifierField`** The database table field to identify resource items, default is 'id'. It is always added as the last sort criterion to keep pagination stable, unless the query uses `distinct`, `groupBy` or `union`, so it should be unique.
+- **`$identifierField`** The database table field to identify resource items, default is 'id'. It can also be set with `setIdentifierField()`. It is always added as the last sort criterion to keep pagination stable, unless the query uses `distinct`, `groupBy` or `union`, so it should be unique.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. 
 - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `[]`, meaning clients can't filter by any column. List the allowed columns. `null` allows any column and is not recommended. Custom filters don't depend on this array.
@@ -30,7 +30,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `[]`, meaning clients can't sort by any field. List the sortable fields. `null` allows any field and is not recommended. Any other field is ignored without raising an error.
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings. Usually, it is not necessary to set this array manually, as the ResourceListable trait handles it based on the request made to the controller.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
-- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
+- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the allIds() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
 - **`$requiredScope`** Forces the listing to always be scoped via `belongsTo`/`relationId`, preventing unscoped access to the full listing. The default value is `null`, meaning no scope is required. When set to a scope name, `getResults()` throws a `MissingRequiredScopeException` unless the request's `belongsTo` value matches exactly. Set it with the `setRequiredScope(?string $scopeName)` method (not directly as a property) — see [Requiring a scope](#requiring-a-scope) below.
 
 ### Wrapping results in a JsonResource
@@ -141,6 +141,7 @@ With the default configuration, calling the controller’s method will return a 
   "message": "3 items found",
   "data": {
     "countItems": 3,
+    "lastPage": 1,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -261,7 +262,9 @@ $service = (new UserListService())
 
 When a required scope is set, `getResults()` validates it before running the query:
 
-- If `belongsTo` is missing or doesn't match `$requiredScope` exactly, a `MissingRequiredScopeException` is thrown.
+- If `belongsTo` is missing or doesn't match `$requiredScope` exactly, or `relationId` is missing, a `MissingRequiredScopeException` is thrown.
+- It applies to `getResults()`, `findIncluding()` and `getAllIds()`. In `findIncluding()`, an element outside the scope is not found.
+- It is not an authorization mechanism: clients choose the `relationId` they send. To restrict what each user can see, enforce it in `createQuery()` or with middleware and policies.
 - If `belongsTo` matches `$requiredScope`, the listing proceeds normally, applying the scope as described above.
 - If `$requiredScope` is left as `null` (the default), no validation is performed.
 

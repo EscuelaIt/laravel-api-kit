@@ -154,6 +154,7 @@ With the default configuration, calling the controller’s method will return a 
   "message": "3 items found",
   "data": {
     "countItems": 3,
+    "lastPage": 1,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -188,6 +189,8 @@ With the default configuration, calling the controller’s method will return a 
   "version": "1"
 }
 ```
+
+`countItems` is the total number of items, and `lastPage` is the number of the last page, which is 1 when there are no items.
 
 ### Transforming Items with a Laravel Resource
 
@@ -234,6 +237,7 @@ The resource is applied to each item returned by the `list()` and `findIncluding
   "message": "1 items found",
   "data": {
     "countItems": 1,
+    "lastPage": 1,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -279,7 +283,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 
 - **`$listModel`** Defines the model class used for the listing.  
 - **`$listResource`** Defines the Laravel `JsonResource` class applied to each returned item. The default value is `null`, meaning the models are returned as they are. See [Transforming Items with a Laravel Resource](#transforming-items-with-a-laravel-resource).
-- **`$identifierField`** The database table field to identify resource items, default is 'id'.
+- **`$identifierField`** The database table field to identify resource items, default is 'id'. You can also configure it using the `setIdentifierField()` method.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
   ```php
@@ -311,7 +315,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
-- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
+- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the allIds() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
 - **`$requiredScope`** Requires a specific scope to be provided in every listing query. When set to a scope name, the `belongsTo` parameter must match this scope exactly, otherwise a `MissingRequiredScopeException` will be thrown with a 403 Forbidden response. This is useful when a listing should always be scoped to a specific context (e.g., items always belonging to a team or user). The default value is `null`, meaning no scope requirement is enforced. For security reasons, this is recommended when building APIs where certain resources should never be accessed without a specific scope applied. Usage example:
   ```php
   protected ?string $requiredScope = 'byTeam';
@@ -319,7 +323,9 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   // Or using the setter method:
   $service->setRequiredScope('byTeam');
   ```
-  When `$requiredScope` is set to `'byTeam'`, every listing request must include `belongsTo=byTeam` in the QueryString, or an exception will be thrown.
+  When `$requiredScope` is set to `'byTeam'`, every request to `list()`, `findIncluding()` and `allIds()` must include `belongsTo=byTeam` and a `relationId` in the QueryString, or an exception will be thrown. In `findIncluding()`, an element outside the scope gets a not found response.
+
+  > **`$requiredScope` is not an authorization mechanism.** It only ensures that the query is filtered, but clients choose the `relationId` they send, so they can request the data of another team or user. To restrict what each user can see, enforce it in `createQuery()`, for example with `where('team_id', Auth::user()->team_id)`, or with your middleware and policies.
 
 ### Wrapping Results in a JsonResource
 
@@ -375,7 +381,9 @@ protected function applyKeywordFilter(?string $keyword): void
 {
     if (!empty($keyword)) {
         $keyword = '%' . $keyword . '%';
-        return $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+        $this->query->where(function ($query) use ($keyword) {
+            $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+        });
     }
 }
 ```
@@ -696,7 +704,7 @@ This method allows you to set individual properties of the `$searchConfiguration
 - `mixed $value` - The value to assign to the configuration property. If the value is `null`, it will not be set.
 
 **Returns:**
-`ListService` - Returns the service instance for method chaining.
+`static` - Returns the service instance for method chaining.
 
 **Example Usage:**
 ```php
@@ -719,7 +727,7 @@ The `$available*` lists also apply to values set with this method, so `created_a
 
 #### setRequiredScope
 
-Requires a specific scope to be provided in every listing query.
+Requires a specific scope to be provided in every query.
 
 **Description:**
 This method enforces that listing queries must include a specific scope (via the `belongsTo` QueryString parameter). If the required scope is not provided or doesn't match, a `MissingRequiredScopeException` is thrown. This is useful for APIs where certain resources should always be accessed within a specific context, such as items that always belong to a team or user.
@@ -728,10 +736,10 @@ This method enforces that listing queries must include a specific scope (via the
 - `?string $scopeName` - The name of the required scope. Pass `null` to disable the scope requirement.
 
 **Returns:**
-`ListService` - Returns the service instance for method chaining.
+`static` - Returns the service instance for method chaining.
 
 **Exceptions:**
-- `MissingRequiredScopeException` - Thrown when `getResults()` is called and the required scope is not provided or doesn't match.
+- `MissingRequiredScopeException` - Thrown when `getResults()`, `findIncluding()` or `getAllIds()` is called and the required scope is not provided or doesn't match, or `relationId` is missing.
 
 **Example Usage:**
 ```php
@@ -770,7 +778,11 @@ $results = $listService->getResults(); // Throws MissingRequiredScopeException
 - The default value is `null`, which means no scope requirement is enforced (backward compatible)
 - Validation only occurs if a required scope is explicitly set
 - This feature works seamlessly with the `ResourceListable` trait - the scope should be passed via the `belongsTo` QueryString parameter
-- For security, it's recommended to combine this with `$availableScopes` to restrict which scopes can be applied
+- A request without `relationId` also throws the exception, because the scope could not be applied
+- The required scope is always allowed, even if it is not listed in `$availableScopes`
+- It also applies to `findIncluding()` and `getAllIds()`. Without a required scope, `findIncluding()` ignores `belongsTo`
+
+> **`$requiredScope` is not an authorization mechanism.** It only ensures that the query is filtered, but clients choose the `relationId` they send, so they can request the data of another team or user. To restrict what each user can see, enforce it in `createQuery()`, for example with `where('team_id', Auth::user()->team_id)`, or with your middleware and policies.
 
 ## Resource Actions
 

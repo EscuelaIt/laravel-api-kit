@@ -41,77 +41,84 @@ class ListService
     ];
     protected ?string $requiredScope = null;
 
-    public function setListModel(string $modelClass): ListService
+    public function setListModel(string $modelClass): static
     {
         $this->listModel = $modelClass;
 
         return $this;
     }
 
-    public function setListResource(?string $resourceClass): ListService
+    public function setIdentifierField(string $identifierField): static
+    {
+        $this->identifierField = $identifierField;
+
+        return $this;
+    }
+
+    public function setListResource(?string $resourceClass): static
     {
         $this->listResource = $resourceClass;
 
         return $this;
     }
 
-    public function setPaginated(bool $paginated): ListService
+    public function setPaginated(bool $paginated): static
     {
         $this->paginated = $paginated;
 
         return $this;
     }
 
-    public function setAvailableFilterColumns(?array $columns): ListService
+    public function setAvailableFilterColumns(?array $columns): static
     {
         $this->availableFilterColumns = $columns;
 
         return $this;
     }
 
-    public function setAvailableScopes(?array $scopes): ListService
+    public function setAvailableScopes(?array $scopes): static
     {
         $this->availableScopes = $scopes;
 
         return $this;
     }
 
-    public function setAvailableIncludes(?array $includes): ListService
+    public function setAvailableIncludes(?array $includes): static
     {
         $this->availableIncludes = $includes;
 
         return $this;
     }
 
-    public function setAvailableSortFields(?array $sortFields): ListService
+    public function setAvailableSortFields(?array $sortFields): static
     {
         $this->availableSortFields = $sortFields;
 
         return $this;
     }
 
-    public function setMaxPerPage(?int $maxPerPage): ListService
+    public function setMaxPerPage(?int $maxPerPage): static
     {
         $this->maxPerPage = $maxPerPage;
 
         return $this;
     }
 
-    public function setMaxFilters(?int $maxFilters): ListService
+    public function setMaxFilters(?int $maxFilters): static
     {
         $this->maxFilters = $maxFilters;
 
         return $this;
     }
 
-    public function setMaxIds(?int $maxIds): ListService
+    public function setMaxIds(?int $maxIds): static
     {
         $this->maxIds = $maxIds;
 
         return $this;
     }
 
-    public function setRequiredScope(?string $scopeName): ListService
+    public function setRequiredScope(?string $scopeName): static
     {
         $this->requiredScope = $scopeName;
 
@@ -134,10 +141,14 @@ class ListService
 
     public function findIncluding($identifier)
     {
+        $this->validateRequiredScope();
         $this->validateListResource();
         $this->query = $this->createQuery();
         $this->normalizeIncludes();
         $this->applyIncludes();
+        if (null !== $this->requiredScope) {
+            $this->applyBelongsTo();
+        }
 
         $element = $this->query->where($this->identifierField, $identifier)->first();
 
@@ -157,7 +168,7 @@ class ListService
         return $query->get()->pluck($this->identifierField);
     }
 
-    public function setSearchConfiguration(array $config): ListService
+    public function setSearchConfiguration(array $config): static
     {
         foreach ($config as $key => $value) {
             if (null !== $value) {
@@ -168,7 +179,7 @@ class ListService
         return $this;
     }
 
-    public function setSearchConfigurationValue(string $key, mixed $value): ListService
+    public function setSearchConfigurationValue(string $key, mixed $value): static
     {
         if (null !== $value) {
             $this->searchConfiguration[$key] = $value;
@@ -461,6 +472,7 @@ class ListService
 
         return [
             'countItems' => $countItems,
+            'lastPage' => max(1, (int) ceil($countItems / $perPage)),
             'result' => $paginatedResults,
         ];
     }

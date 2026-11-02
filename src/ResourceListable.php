@@ -24,6 +24,8 @@ trait ResourceListable
     ];
 
     protected $findIncludingValidationRules = [
+        'belongsTo' => 'nullable|string',
+        'relationId' => 'nullable|string',
         'include' => 'nullable',
         'include.*' => 'string',
     ];
@@ -59,7 +61,7 @@ trait ResourceListable
     {
         $validator = $this->getValidator();
         if ($validator->fails()) {
-            return APIResponse::unprocessableEntity($validator->errors());
+            return APIResponse::badRequest($validator->errors());
         }
 
         $allIds = $service->setSearchConfiguration($this->getSearchConfiguration())->getAllIds();

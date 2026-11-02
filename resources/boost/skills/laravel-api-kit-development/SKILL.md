@@ -1,6 +1,6 @@
 ---
 name: laravel-api-kit-development
-description: "Use this skill when working with escuelait/laravel-api-kit to build API resources with list services, adapters, and controllers. Covers creating ListServices, implementing ResourceListable trait, customizing ResponseApiAdapters, and building scoped queries for resource filtering."
+description: "Use this skill when working with escuelait/laravel-api-kit to build API resources with list services, Laravel resources, and controllers. Covers creating ListServices, implementing ResourceListable trait, transforming items with Laravel resources, and building scoped queries for resource filtering."
 license: MIT
 metadata:
   author: escuelait
@@ -33,7 +33,7 @@ To execute all actions for a resource, we use a single controller that must use 
 
 - Resource listing: `./references/api-resource-listing.md` Use this document when you need to perform resource querying and listing operations.
 - Configuring action system: `./references/api-action-system-configuration.md` Use this document when you need to configure the action system for a resource.
-- Action development: Use this document when you need to develop a specific action.
+- Action development: `./references/creating-api-actions.md` Use this document when you need to develop a specific action.
 - Custom filters implementation on searches: `./references/search-custom-filters.md` Use this document when you need to create an arbitrary search filter, beyond the column-value equality filters that are implemented by default in the service.
 
 ## Best Practices

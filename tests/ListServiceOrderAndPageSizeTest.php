@@ -177,6 +177,46 @@ class ListServiceOrderAndPageSizeTest extends TestCase
     }
 
     #[Test]
+    #[DataProvider('lastPages')]
+    public function itReturnsLastPage(int $items, int $perPage, int $expected): void
+    {
+        Post::factory()->count($items)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration(['perPage' => $perPage])
+            ->getResults()
+        ;
+
+        $this->assertSame($expected, $results['lastPage']);
+    }
+
+    public static function lastPages(): array
+    {
+        return [
+            'no items' => [0, 10, 1],
+            'fewer items than a page' => [3, 10, 1],
+            'exact pages' => [4, 2, 2],
+            'incomplete last page' => [5, 2, 3],
+        ];
+    }
+
+    #[Test]
+    public function itCalculatesLastPageWithCappedPageSize(): void
+    {
+        Post::factory()->count(5)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setMaxPerPage(2)
+            ->setSearchConfiguration(['perPage' => 100])
+            ->getResults()
+        ;
+
+        $this->assertSame(3, $results['lastPage']);
+    }
+
+    #[Test]
     #[DataProvider('pageSizes')]
     public function itNormalizesPageSize(mixed $requested, ?int $maxPerPage, int $expected): void
     {

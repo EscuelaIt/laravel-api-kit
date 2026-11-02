@@ -659,6 +659,46 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
+    public function itReturnsTheSubclassFromAllSetters(): void
+    {
+        $service = new class extends ListService {
+            public function subclassMethod(): string
+            {
+                return 'subclass';
+            }
+        };
+
+        $this->assertSame('subclass', $service
+            ->setListModel(Post::class)
+            ->setIdentifierField('id')
+            ->setListResource(null)
+            ->setPaginated(true)
+            ->setAvailableFilterColumns([])
+            ->setAvailableScopes([])
+            ->setAvailableIncludes([])
+            ->setAvailableSortFields([])
+            ->setMaxPerPage(null)
+            ->setMaxFilters(null)
+            ->setMaxIds(null)
+            ->setRequiredScope(null)
+            ->setSearchConfiguration([])
+            ->setSearchConfigurationValue('keyword', null)
+            ->subclassMethod());
+    }
+
+    #[Test]
+    public function itUsesIdentifierFieldConfiguredWithSetter(): void
+    {
+        Post::factory()->create(['title' => 'First']);
+        $post = Post::factory()->create(['title' => 'Second']);
+
+        $service = (new ListService())->setListModel(Post::class)->setIdentifierField('title');
+
+        $this->assertTrue($post->is($service->findIncluding('Second')));
+        $this->assertSame(['First', 'Second'], $service->getAllIds()->all());
+    }
+
+    #[Test]
     public function itIgnoresClientOptionsByDefault(): void
     {
         $post = Post::factory()->create(['title' => 'A', 'status' => 'draft']);

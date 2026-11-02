@@ -9,6 +9,9 @@
 
 ### Breaking changes
 
+- With `$requiredScope`, `findIncluding()` now requires `belongsTo` and `relationId` like the other methods, and doesn't find elements outside the scope.
+- `ListService` setters now return `static` instead of `ListService`. Subclasses overriding a setter with the `ListService` return type must change it to `static`.
+- `ResourceListable::allIds()` now responds 400 instead of 422 to invalid parameters, like `list()` and `findIncluding()`.
 - Support for PHP 8.1 and 8.2, Laravel 9, 10 and 11, Laravel 12 before 12.69 and Laravel 13 before 13.30 has been dropped. The package now requires PHP 8.3+ and Laravel 12.69+ or 13.30+, the versions tested in CI and the lowest ones without known security advisories.
 - `$availableFilterColumns`, `$availableSortFields`, `$availableScopes` and `$availableIncludes` now default to `[]`, so clients can't filter, sort, apply scopes or include relationships until you list what they can use. These lists also apply to values set with `setSearchConfiguration()` and `setSearchConfigurationValue()`. Custom filters don't depend on them.
 - With `$availableIncludes = null`, only methods with a declared relationship return type (e.g. `: HasMany`) and relationships defined with `resolveRelationUsing()` are loaded. Anything else is ignored without being called, including untyped relationships. Relationships listed in `$availableIncludes` don't need a return type.
@@ -21,11 +24,13 @@
 
 - `$listResource` and `setListResource()`, to apply a Laravel `JsonResource` to the items returned by `list()` and `findIncluding()`.
 - `$availableSortFields` and `setAvailableSortFields()`.
-- `setAvailableFilterColumns()`.
+- `setAvailableFilterColumns()` and `setIdentifierField()`.
+- `lastPage` in paginated listings, next to `countItems`.
 - `make:list-service` now generates the `$available*` properties.
 
 ### Fixed
 
+- `MissingRequiredScopeException` now gets the documented 403 response instead of a 500.
 - Items no longer repeat or get lost between pages because of an unstable order.
 - `per_page` is now always an integer in the JSON response, and `per_page=0` no longer skips `$maxPerPage`.
 - The count query of paginated listings no longer includes `ORDER BY`, which some databases reject.

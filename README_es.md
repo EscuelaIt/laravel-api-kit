@@ -148,6 +148,7 @@ Con la configuración predeterminada, al invocar el método del controlador se o
   "message": "3 items found",
   "data": {
     "countItems": 3,
+    "lastPage": 1,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -182,6 +183,8 @@ Con la configuración predeterminada, al invocar el método del controlador se o
   "version": "1"
 }
 ```
+
+`countItems` es el número total de elementos, y `lastPage` es el número de la última página, que es 1 cuando no hay elementos.
 
 ### Transformar los elementos con un resource de Laravel
 
@@ -228,6 +231,7 @@ El resource se aplica a cada elemento que devuelven los métodos `list()` y `fin
   "message": "1 items found",
   "data": {
     "countItems": 1,
+    "lastPage": 1,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -273,13 +277,13 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
 
 - **`$listModel`**  Indica la clase del modelo que vamos a usar para los listados.  
 - **`$listResource`** Indica la clase `JsonResource` de Laravel que se aplica a cada elemento devuelto. El valor predeterminado es `null`, lo que significa que los modelos se devuelven tal cual. Consulta [Transformar los elementos con un resource de Laravel](#transformar-los-elementos-con-un-resource-de-laravel).
-- **`$identifierField`** El campo de la tabla que sirve para identificar los elementos del recurso. De manera predeterminada es 'id'.
+- **`$identifierField`** El campo de la tabla que sirve para identificar los elementos del recurso. De manera predeterminada es 'id'. También se puede configurar con el método `setIdentifierField()`.
 - **`$paginated`** Define si el resultado del recurso se enviará con o sin paginación. El valor predeterminado es true, lo que configura la paginación.
-- **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  
+- **`$maxPerPage`** Indica el tamaño máximo de página permitido en los resultados paginados. El valor predeterminado es `null`, lo que significa que no hay límite. Si se indica un entero positivo, cualquier `per_page` mayor se reduce automáticamente a ese máximo. Es útil para evitar problemas de rendimiento por páginas excesivamente grandes:  
   ```php
   protected ?int $maxPerPage = 100;
   ```
-  You can also configure this using the `setMaxPerPage()` method:  
+  También se puede configurar con el método `setMaxPerPage()`:  
   ```php
   $service->setMaxPerPage(50);
   ```
@@ -303,8 +307,14 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
   ```php
   $service->setAvailableSortFields(['name', 'created_at']);
   ```
+- **`$requiredScope`** Obliga a limitar cada consulta con un scope concreto. Si tiene valor, cada petición a `list()`, `findIncluding()` y `allIds()` debe incluir en el QueryString `belongsTo` con ese scope y un `relationId`; si no, se lanza `MissingRequiredScopeException`, con una respuesta 403. En `findIncluding()`, un elemento fuera del scope recibe una respuesta de no encontrado. El valor predeterminado es `null`, es decir, sin scope obligatorio. También se puede configurar con el método `setRequiredScope()`:
+  ```php
+  protected ?string $requiredScope = 'byTeam';
+  ```
+  > **`$requiredScope` no es un mecanismo de autorización.** Solo garantiza que la consulta esté filtrada, pero el cliente elige el `relationId` que envía, así que puede pedir los datos de otro equipo o usuario. Para limitar lo que ve cada usuario, aplícalo en `createQuery()`, por ejemplo con `where('team_id', Auth::user()->team_id)`, o con tus middleware y policies.
 - **`$searchConfiguration`** Es un array de datos de configuración de la búsqueda en los listados que está pensado para personalizar de manera fina las búsquedas con múltiples parámetros. Esta propiedad en el `ListService` almacena inicialmente la configuración predeterminada y existe un método `setSearchConfiguration()` que permite enviarle una configuración personalizada para un listado en particular, que hace un merge de los datos predeterminados y los nuevos datos pasados al método.
-- **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
+- **`$maxFilters`** Indica el número máximo de filtros permitidos por consulta. El valor predeterminado es `null`, lo que significa que no hay límite. Si se indica un entero positivo, los filtros que superen ese número se descartan sin lanzar un error.
+- **`$maxIds`** Indica el número máximo de identificadores que se devuelven al llamar al método `allIds()` del trait `ResourceListable`, para evitar devolver tantos elementos que puedan sobrecargar el sistema. El valor predeterminado es 100. Se puede asignar `null` para no tener límite.
 
 ### Envolver resultados en un JsonResource
 
@@ -354,14 +364,16 @@ Permite enviar una keyword para buscar en el modelo por esa keyword.
 example.com/users?keyword=paul
 ```
 
-Esta configuración en realidad no realiza ninguna búsqueda por si sola. La tienes que activar en el `ListService`, sobreescribiendo el método `createQuery()`:
+Esta configuración en realidad no realiza ninguna búsqueda por si sola. La tienes que activar en el `ListService`, sobreescribiendo el método `applyKeywordFilter()`:
 
 ```php
 protected function applyKeywordFilter(?string $keyword): void 
 {
     if (!empty($keyword)) {
         $keyword = '%' . $keyword . '%';
-        return $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+        $this->query->where(function ($query) use ($keyword) {
+            $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
+        });
     }
 }
 ```
@@ -612,9 +624,9 @@ https://example.com/api/users?belongsTo=byTeam&relationId=2
 
 Entonces Se activará un scope llamado byTeam en el modelo del recurso y se le pasará el valor 2 como dato, obteniendo únicamente los usuarios que pertenecen al team con id=2
 
-##### Restricting Allowed Scopes with $availableScopes
+##### Limitar los scopes permitidos con $availableScopes
 
-Similar to `$availableFilterColumns`, you can restrict which scopes are allowed to be applied via the `belongsTo` configuration by setting the `$availableScopes` property.
+De forma similar a `$availableFilterColumns`, puedes limitar qué scopes se pueden aplicar mediante la configuración `belongsTo` con la propiedad `$availableScopes`.
 
 De manera predeterminada, `$availableScopes` es `[]`, lo que significa que no se puede aplicar ningún scope mediante el QueryString. Define qué scopes se permiten:
 
@@ -622,23 +634,23 @@ De manera predeterminada, `$availableScopes` es `[]`, lo que significa que no se
 protected ?array $availableScopes = ['byTeam', 'published'];
 ```
 
-With this configuration, only the `byTeam` and `published` scopes can be applied. Any attempt to apply a different scope via QueryString will be ignored.
+Con esta configuración solo se pueden aplicar los scopes `byTeam` y `published`. Cualquier intento de aplicar otro scope mediante el QueryString se ignora.
 
 > **Por seguridad, evita asignar `null` a `$availableScopes`**, para impedir que los usuarios activen scopes no previstos que puedan exponer datos sensibles o filtrar de forma no deseada.
 
-#### "include" Configuration
+#### Configuración "include"
 
-The `"include"` configuration allows eager loading of related entities in listing results. This is useful for including associated data (like comments on posts, or payments for users) without requiring additional queries.
+La configuración `"include"` permite cargar de forma anticipada las entidades relacionadas en los resultados del listado. Es útil para incluir datos asociados (como los comentarios de un post o los pagos de un usuario) sin necesidad de consultas adicionales.
 
 ```
 example.com/posts?include=comments,author
 ```
 
-You can specify multiple relationships separated by commas. The data will be eager-loaded using Laravel's `with()` method.
+Puedes indicar varias relaciones separadas por comas. Los datos se cargan con el método `with()` de Laravel.
 
-##### Restricting Allowed Includes with $availableIncludes
+##### Limitar las relaciones permitidas con $availableIncludes
 
-Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
+De forma similar a `$availableFilterColumns` y `$availableScopes`, puedes limitar qué relaciones se pueden incluir mediante el parámetro `include` con la propiedad `$availableIncludes`.
 
 De manera predeterminada, `$availableIncludes` es `[]`, lo que significa que no se puede incluir ninguna relación mediante el QueryString. Define qué relaciones se permiten:
 
@@ -646,9 +658,9 @@ De manera predeterminada, `$availableIncludes` es `[]`, lo que significa que no 
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];
 ```
 
-With this configuration, only the `comments`, `author`, and `tags` relationships can be included. Any attempt to include other relationships via QueryString will be ignored.
+Con esta configuración solo se pueden incluir las relaciones `comments`, `author` y `tags`. Cualquier intento de incluir otras relaciones mediante el QueryString se ignora.
 
-You can also set the available includes using the `setAvailableIncludes()` method:
+También se puede configurar con el método `setAvailableIncludes()`:
 
 ```php
 $service = (new ListService())
@@ -657,19 +669,78 @@ $service = (new ListService())
     ->setSearchConfiguration($config);
 ```
 
-**Example URL with allowed includes:**
+**Ejemplo de URL con relaciones permitidas:**
 
 ```
 https://example.com/api/posts?include=comments,author
 ```
 
-This will return posts with their related comments and authors eager-loaded.
+Devuelve los posts con sus comentarios y autores ya cargados.
 
-**Example with restricted includes:**
+**Ejemplo con relaciones limitadas:**
 
-If `$availableIncludes` is set to `['comments']` but you request `?include=comments,author`, only the `comments` relationship will be included. The `author` relationship will be ignored because it's not in the allowed list.
+Si `$availableIncludes` es `['comments']` y se solicita `?include=comments,author`, solo se incluye la relación `comments`. La relación `author` se ignora porque no está en la lista de permitidas.
 
 > **Por seguridad y rendimiento, evita asignar `null` a `$availableIncludes`**. Con `null`, los clientes pueden cargar cualquier relación, y solo se aceptan métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`). Las relaciones sin tipo se ignoran, salvo que las incluyas en `$availableIncludes`. Además, permitiría a los usuarios cargar relaciones costosas que afecten al rendimiento o expongan datos sensibles de las entidades relacionadas.
+
+### Métodos de ListService
+
+#### setSearchConfigurationValue
+
+Asigna un valor concreto en el array de configuración de la búsqueda.
+
+**Descripción:**
+Permite asignar propiedades individuales del array `$searchConfiguration` sin tener que enviar el array completo. Se puede encadenar con otros métodos del servicio.
+
+**Parámetros:**
+- `string $key` - El nombre de la propiedad de configuración (por ejemplo, 'keyword', 'perPage', 'sortField')
+- `mixed $value` - El valor que se asigna a la propiedad. Si es `null`, no se asigna.
+
+**Devuelve:**
+`static` - La instancia del servicio, para encadenar métodos.
+
+**Ejemplo de uso:**
+```php
+$listService = new ListService();
+$listService->setListModel(Post::class)
+    ->setAvailableSortFields(['created_at'])
+    ->setSearchConfigurationValue('keyword', 'laravel')
+    ->setSearchConfigurationValue('perPage', 20)
+    ->setSearchConfigurationValue('sortField', 'created_at')
+    ->setSearchConfigurationValue('sortDirection', 'desc');
+
+$results = $listService->getResults();
+```
+
+Las listas `$available*` también se aplican a los valores asignados con este método, así que `created_at` debe estar en `$availableSortFields` para que se aplique el orden.
+
+#### setRequiredScope
+
+Obliga a indicar un scope concreto en cada consulta.
+
+**Parámetros:**
+- `?string $scopeName` - El nombre del scope obligatorio. Con `null` se desactiva la obligación.
+
+**Devuelve:**
+`static` - La instancia del servicio, para encadenar métodos.
+
+**Excepciones:**
+- `MissingRequiredScopeException` - Se lanza al llamar a `getResults()`, `findIncluding()` o `getAllIds()` si el scope no se indica o no coincide, o si falta `relationId`.
+
+**Ejemplo de uso:**
+```php
+$listService = new ListService();
+$listService->setListModel(Invoice::class)
+    ->setRequiredScope('byTeam')
+    ->setSearchConfiguration([
+        'belongsTo' => 'byTeam',
+        'relationId' => 123,
+    ]);
+
+$results = $listService->getResults();
+```
+
+El scope obligatorio siempre está permitido, aunque no aparezca en `$availableScopes`. Recuerda que no es un mecanismo de autorización, como se explica en la propiedad `$requiredScope`.
 
 ## Resource Actions
 

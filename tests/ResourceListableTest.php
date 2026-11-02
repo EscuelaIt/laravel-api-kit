@@ -10,6 +10,7 @@ use EscuelaIT\Test\Fixtures\LocalizedPostResource;
 use EscuelaIT\Test\Fixtures\Post;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Negartarh\APIWrapper\Facades\APIResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -249,6 +250,75 @@ class ResourceListableTest extends TestCase
     }
 
     #[Test]
+    #[DataProvider('routesRequiringScope')]
+    public function itRespondsForbiddenWhenRequiredScopeIsMissing(string $method, array $parameters): void
+    {
+        $post = Post::factory()->create();
+
+        Route::get('/required-scope', function () use ($method, $parameters, $post) {
+            $service = (new ListService())->setListModel(Post::class)->setRequiredScope('greaterThanId');
+            $arguments = [] === $parameters ? [$service] : [$post->id, $service];
+
+            return $this->resourceControllerClass->{$method}(...$arguments);
+        });
+
+        $response = $this->getJson('/required-scope');
+
+        $response->assertStatus(403);
+        $response->assertJsonPath('status', 403);
+        $response->assertJsonPath('message', 'Missing required scope: greaterThanId');
+    }
+
+    public static function routesRequiringScope(): array
+    {
+        return [
+            'list' => ['list', []],
+            'allIds' => ['allIds', []],
+            'findIncluding' => ['findIncluding', ['identifier']],
+        ];
+    }
+
+    #[Test]
+    public function itRespondsBadRequestWithMalformedScopeInFindIncluding(): void
+    {
+        $this->app->instance('request', Request::create('/posts/1?belongsTo=greaterThanId&relationId[]=2', 'GET'));
+
+        try {
+            $this->resourceControllerClass->findIncluding(1, (new ListService())->setListModel(Post::class)->setRequiredScope('greaterThanId'));
+            $this->fail('Expected a bad request response');
+        } catch (HttpResponseException $e) {
+            $this->assertSame(400, $e->getResponse()->getStatusCode());
+        }
+    }
+
+    #[Test]
+    public function itRespondsNotFoundWhenElementIsOutsideRequiredScope(): void
+    {
+        $this->app->instance('request', Request::create('/posts/1?belongsTo=greaterThanId&relationId=2', 'GET'));
+        $post = Post::factory()->create(['id' => 1]);
+
+        try {
+            $this->resourceControllerClass->findIncluding($post->id, (new ListService())->setListModel(Post::class)->setRequiredScope('greaterThanId'));
+            $this->fail('Expected a not found response');
+        } catch (HttpResponseException $e) {
+            $this->assertSame(404, $e->getResponse()->getStatusCode());
+        }
+    }
+
+    #[Test]
+    public function itRespondsBadRequestWithMalformedParamsInAllIds(): void
+    {
+        $this->app->instance('request', Request::create('/posts/ids?sortDirection=foo', 'GET'));
+
+        try {
+            $this->resourceControllerClass->allIds((new ListService())->setListModel(Post::class));
+            $this->fail('Expected a bad request response');
+        } catch (HttpResponseException $e) {
+            $this->assertSame(400, $e->getResponse()->getStatusCode());
+        }
+    }
+
+    #[Test]
     #[DataProvider('validQueryStrings')]
     public function itKeepsAcceptingValidParams(string $queryString, int $expectedItems): void
     {
@@ -295,6 +365,7 @@ class ResourceListableTest extends TestCase
 
         $this->assertSame('3 items found', $json['message']);
         $this->assertSame(3, $json['data']['countItems']);
+        $this->assertSame(2, $json['data']['lastPage']);
         $this->assertSame(1, $json['data']['result']['current_page']);
         $this->assertSame(2, $json['data']['result']['per_page']);
         $this->assertNotNull($json['data']['result']['next_page_url']);
