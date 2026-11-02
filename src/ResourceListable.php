@@ -12,8 +12,10 @@ trait ResourceListable
     protected $listValidationRules = [
         'keyword' => 'nullable|string',
         'filters' => 'nullable|array',
+        'filters.*' => 'array',
+        'filters.*.name' => 'required|string',
         'sortField' => 'nullable|string',
-        'sortDirection' => 'nullable|string',
+        'sortDirection' => ['nullable', 'string', 'regex:/^(asc|desc)$/i'],
         'per_page' => 'nullable|integer|min:0|max:10000',
         'belongsTo' => 'nullable|string',
         'relationId' => 'nullable|string',

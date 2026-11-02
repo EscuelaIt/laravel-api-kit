@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace EscuelaIT\APIKit;
 
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
@@ -227,20 +229,25 @@ class ListService
         }
 
         $filters = array_map(function ($item) {
-            if (is_array($item)) {
-                foreach ($item as $key => $value) {
-                    if (is_string($value) && in_array($value, ['true', 'false'], true)) {
-                        $item[$key] = 'true' === $value;
-                    }
-                }
-
-                return (object) $item;
+            if (is_object($item)) {
+                $item = (array) $item;
             }
 
-            return $item;
+            // Malformed filters are ignored
+            if (!is_array($item) || !is_string($item['name'] ?? null)) {
+                return null;
+            }
+
+            foreach ($item as $key => $value) {
+                if (is_string($value) && in_array($value, ['true', 'false'], true)) {
+                    $item[$key] = 'true' === $value;
+                }
+            }
+
+            return (object) ($item + ['active' => false, 'value' => null]);
         }, $filters);
 
-        $this->searchConfiguration['filters'] = $filters;
+        $this->searchConfiguration['filters'] = array_values(array_filter($filters));
     }
 
     protected function normalizeIncludes(): void
@@ -392,10 +399,57 @@ class ListService
     private function filterAllowedIncludes(array $includes): array
     {
         if (null === $this->availableIncludes) {
-            return $includes;
+            return array_values(array_filter($includes, fn ($include) => $this->isLoadableRelation($include)));
         }
 
         return array_values(array_intersect($includes, $this->availableIncludes));
+    }
+
+    /**
+     * Eloquent calls each eager load name as a method on the model, and models forward
+     * unknown methods to the query builder, so "truncate" would empty the table.
+     * Names coming from the request must be checked before reaching with().
+     */
+    private function isLoadableRelation(string $include): bool
+    {
+        $model = $this->query->getModel();
+
+        foreach (explode('.', Str::before($include, ':')) as $name) {
+            if (!$this->isRelationMethod($model, $name)) {
+                return false;
+            }
+
+            $relation = $model->newInstance()->{$name}();
+            if (!$relation instanceof Relation) {
+                return false;
+            }
+
+            $model = $relation->getRelated();
+        }
+
+        return true;
+    }
+
+    private function isRelationMethod(Model $model, string $name): bool
+    {
+        if (!method_exists($model, $name)) {
+            // Relations defined with resolveRelationUsing()
+            return $model->isRelation($name);
+        }
+
+        $method = new \ReflectionMethod($model, $name);
+        if (!$method->isPublic() || $method->isStatic() || Model::class === $method->getDeclaringClass()->getName()) {
+            return false;
+        }
+
+        $returnType = $method->getReturnType();
+        if ($returnType instanceof \ReflectionNamedType) {
+            return is_a($returnType->getName(), Relation::class, true);
+        }
+
+        // Untyped methods are only trusted in the model itself. Those coming from
+        // traits, such as SoftDeletes::restore(), are not relations.
+        return null === $returnType && $method->getFileName() === $method->getDeclaringClass()->getFileName();
     }
 
     /**

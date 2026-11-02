@@ -8,8 +8,10 @@ use EscuelaIT\APIKit\ListService;
 use EscuelaIT\APIKit\ResourceListable;
 use EscuelaIT\Test\Fixtures\Post;
 use EscuelaIT\Test\Fixtures\PostResource;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Negartarh\APIWrapper\Facades\APIResponse;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
@@ -216,6 +218,59 @@ class ResourceListableTest extends TestCase
         APIResponse::shouldNotReceive('ok');
 
         $this->resourceControllerClass->findIncluding($identifier, $service);
+    }
+
+    #[Test]
+    #[DataProvider('malformedQueryStrings')]
+    public function itRespondsBadRequestWithMalformedParams(string $queryString): void
+    {
+        $this->app->instance('request', Request::create('/posts?'.$queryString, 'GET'));
+        Post::factory()->create();
+
+        try {
+            $this->resourceControllerClass->list((new ListService())->setListModel(Post::class));
+            $this->fail('Expected a bad request response');
+        } catch (HttpResponseException $e) {
+            $this->assertSame(400, $e->getResponse()->getStatusCode());
+        }
+    }
+
+    public static function malformedQueryStrings(): array
+    {
+        return [
+            'invalid direction' => ['sortField=title&sortDirection=foo'],
+            'direction as array' => ['sortField=title&sortDirection[]=asc'],
+            'filter is not an array' => ['filters[]=abc'],
+            'filter without name' => ['filters[0][active]=true&filters[0][value]=x'],
+            'filter name as array' => ['filters[0][name][]=title&filters[0][active]=true'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('validQueryStrings')]
+    public function itKeepsAcceptingValidParams(string $queryString, int $expectedItems): void
+    {
+        $this->app->instance('request', Request::create('/posts?'.$queryString, 'GET'));
+        Post::factory()->create(['title' => 'Post']);
+
+        $response = $this->resourceControllerClass->list((new ListService())->setListModel(Post::class));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame($expectedItems, json_decode($response->getContent(), true)['data']['countItems']);
+    }
+
+    public static function validQueryStrings(): array
+    {
+        return [
+            'lowercase direction' => ['sortField=title&sortDirection=desc', 1],
+            'uppercase direction' => ['sortField=title&sortDirection=DESC', 1],
+            'inactive filter without value' => ['filters[0][name]=title&filters[0][active]=false', 1],
+            'filter without active is not processed' => ['filters[0][name]=title&filters[0][value]=Other', 1],
+            'active filter' => ['filters[0][name]=title&filters[0][active]=true&filters[0][value]=Other', 0],
+            'active filter without value' => ['filters[0][name]=title&filters[0][active]=true', 0],
+            'unknown include' => ['include=nope', 1],
+            'dangerous include' => ['include=truncate', 1],
+        ];
     }
 
     #[Test]

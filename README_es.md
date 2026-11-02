@@ -374,7 +374,7 @@ example.com/users?sortField=name&sortDirection=desc
 
 Puedes indicar cualquier campo del modelo para conseguir que el orden deseado en el listado, salvo que `$availableSortFields` limite los campos permitidos.
 
-Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente.
+Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente. Cualquier otro valor recibe una respuesta 400.
 
 #### Configuración "per_page"
 
@@ -609,7 +609,7 @@ You can specify multiple relationships separated by commas. The data will be eag
 
 Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
 
-By default, `$availableIncludes` is `null`, which means any relationship can be included via QueryString. For security and performance reasons, it's recommended to explicitly define which relationships are allowed:
+De manera predeterminada, `$availableIncludes` es `null`, lo que permite incluir cualquier relación mediante el QueryString. Los nombres que no son relaciones se ignoran. Un método público sin tipo de retorno declarado en el propio modelo no se puede distinguir de una relación sin llamarlo, así que declara el tipo de retorno de tus relaciones (por ejemplo, `: HasMany`) y de tus otros métodos públicos. Por seguridad y rendimiento, se recomienda definir de forma explícita qué relaciones se permiten:
 
 ```php
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];
