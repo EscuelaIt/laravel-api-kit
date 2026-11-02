@@ -21,7 +21,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 
 - **`$listModel`** Defines the model class used for the listing.  
 - **`$listResource`** Defines the Laravel `JsonResource` class applied to each item returned by `list()` and `findIncluding()`. The default value is `null`, meaning the models are returned as they are. See "Transforming items with a Laravel resource".
-- **`$identifierField`** The database table field to identify resource items, default is 'id'.
+- **`$identifierField`** The database table field to identify resource items, default is 'id'. It is always added as the last sort criterion to keep pagination stable, unless the query uses `distinct`, `groupBy` or `union`, so it should be unique.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. 
 - **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `[]`, meaning clients can't filter by any column. List the allowed columns. `null` allows any column and is not recommended. Custom filters don't depend on this array.

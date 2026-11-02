@@ -16,7 +16,7 @@ trait ResourceListable
         'filters.*.name' => 'required|string',
         'sortField' => 'nullable|string',
         'sortDirection' => ['nullable', 'string', 'regex:/^(asc|desc)$/i'],
-        'per_page' => 'nullable|integer|min:0|max:10000',
+        'per_page' => 'nullable|integer|min:1|max:10000',
         'belongsTo' => 'nullable|string',
         'relationId' => 'nullable|string',
         'include' => 'nullable',

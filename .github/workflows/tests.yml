@@ -7,12 +7,58 @@ on:
     branches: [ main ]
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: |
+          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Check for security vulnerabilities
+        run: composer audit
+
+      - name: Run PHP CS Fixer check
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
   tests:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        php: [8.4]
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['12', '13']
+        dependencies: ['highest']
+        include:
+          - php: '8.3'
+            laravel: '12'
+            dependencies: 'lowest'
+          - php: '8.3'
+            laravel: '13'
+            dependencies: 'lowest'
+
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.dependencies }}
 
     steps:
       - uses: actions/checkout@v5
@@ -29,21 +75,18 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
           restore-keys: |
             ${{ runner.os }}-composer-
 
+      - name: Select Laravel version
+        run: composer require --dev --no-update --no-interaction "laravel/framework:^${{ matrix.laravel }}.0" "orchestra/testbench:${{ matrix.laravel == '12' && '^10.9' || '^11.0' }}"
+
+      # The quality job audits the dependencies. Lowest versions may have known advisories.
       - name: Install Dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
-
-      - name: Validate composer.json
-        run: composer validate --strict
-
-      - name: Check for security vulnerabilities
-        run: composer audit
-
-      - name: Run PHP CS Fixer check
-        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+        run: composer update --prefer-dist --no-progress --no-interaction ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
+        env:
+          COMPOSER_NO_SECURITY_BLOCKING: 1
 
       - name: Run PHPUnit Tests
         run: php -d zend.assertions=1 -d assert.active=1 vendor/bin/phpunit

@@ -239,6 +239,8 @@ class ResourceListableTest extends TestCase
     {
         return [
             'invalid direction' => ['sortField=title&sortDirection=foo'],
+            'page size of zero' => ['per_page=0'],
+            'negative page size' => ['per_page=-1'],
             'direction as array' => ['sortField=title&sortDirection[]=asc'],
             'filter is not an array' => ['filters[]=abc'],
             'filter without name' => ['filters[0][active]=true&filters[0][value]=x'],
@@ -294,7 +296,7 @@ class ResourceListableTest extends TestCase
         $this->assertSame('3 items found', $json['message']);
         $this->assertSame(3, $json['data']['countItems']);
         $this->assertSame(1, $json['data']['result']['current_page']);
-        $this->assertEquals(2, $json['data']['result']['per_page']);
+        $this->assertSame(2, $json['data']['result']['per_page']);
         $this->assertNotNull($json['data']['result']['next_page_url']);
         $this->assertCount(2, $json['data']['result']['data']);
         $this->assertSame([

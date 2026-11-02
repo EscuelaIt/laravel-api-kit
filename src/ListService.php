@@ -442,13 +442,17 @@ class ListService
 
     private function getPaginatedResults()
     {
-        $perPage = $this->searchConfiguration['perPage'];
+        $perPage = (int) $this->searchConfiguration['perPage'];
 
-        if (null !== $this->maxPerPage && $perPage > $this->maxPerPage) {
-            $perPage = $this->maxPerPage;
+        if (null !== $this->maxPerPage) {
+            $perPage = min($perPage, $this->maxPerPage);
         }
 
-        $countItems = $this->query->count();
+        // simplePaginate() replaces a page size of 0 with the one of the model
+        $perPage = max(1, $perPage);
+
+        // Some databases, such as PostgreSQL, reject ORDER BY in a count query
+        $countItems = (clone $this->query)->reorder()->count();
         $paginatedResults = $this->query->simplePaginate($perPage)->withQueryString();
 
         if ($this->listResource) {
@@ -463,9 +467,28 @@ class ListService
 
     private function applyOrder(): void
     {
-        if ($this->searchConfiguration['sortField'] && $this->isSortFieldAllowed($this->searchConfiguration['sortField'])) {
-            $this->query->orderBy($this->searchConfiguration['sortField'], $this->searchConfiguration['sortDirection']);
+        $sortField = $this->searchConfiguration['sortField'];
+
+        if ($sortField && $this->isSortFieldAllowed($sortField)) {
+            $this->query->orderBy($sortField, $this->searchConfiguration['sortDirection']);
         }
+
+        // Without a unique last criterion, items can repeat or get lost between pages
+        if ($sortField !== $this->identifierField || !$this->isSortFieldAllowed($sortField)) {
+            $this->applyIdentifierOrder();
+        }
+    }
+
+    private function applyIdentifierOrder(): void
+    {
+        $query = $this->query->toBase();
+
+        // These queries can't be sorted by a column that is not grouped or selected
+        if (!empty($query->groups) || !empty($query->unions) || $query->distinct) {
+            return;
+        }
+
+        $this->query->orderBy($this->query->getModel()->qualifyColumn($this->identifierField));
     }
 
     private function applyBelongsTo(): void

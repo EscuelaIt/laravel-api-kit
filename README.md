@@ -12,7 +12,7 @@ composer require escuelait/laravel-api-kit
 
 That's it! The package will automatically register its service provider.
 
-**Laravel compatibility**: Laravel 9.0+ and PHP 8.1+. 
+**Laravel compatibility**: Laravel 12.40+ and 13, with PHP 8.3+. 
 
 ## Built-in Utilities in this Package
 
@@ -418,6 +418,8 @@ You can specify any field listed in `$availableSortFields` to achieve the desire
 
 Valid `sortDirection` values are `"asc"` (ascending) and `"desc"` (descending). Any other value gets a 400 response.
 
+To keep pagination stable, `$identifierField` is always added as the last sort criterion, in ascending order, so listings without `sortField` are sorted by it. This is skipped if the query defined in `createQuery()` uses `distinct`, `groupBy` or `union`, so those queries should define their own order.
+
 #### "per_page" Configuration
 
 Allows specifying a custom page size for the resource listing.
@@ -432,7 +434,7 @@ This is only considered if the resource is paginated. To disable pagination, set
 protected bool $paginated = true;
 ```
 
-If pagination is enabled, the default page size is 10.
+If pagination is enabled, the default page size is 10. The value must be between 1 and 10000, otherwise the response is a 400.
 
 **Limiting Maximum Page Size**: You can enforce a maximum page size using the `$maxPerPage` property. If a user requests a `per_page` value exceeding this limit, it will be automatically capped to the configured maximum without raising an error:
 

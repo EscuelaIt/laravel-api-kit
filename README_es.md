@@ -12,7 +12,7 @@ composer require escuelait/laravel-api-kit
 
 Una vez instalado el package Laravel registrará automáticamente el service provider.
 
-**Compatibilidad con Laravel y PHP**: Laravel 9.0+ y PHP 8.1+. 
+**Compatibilidad con Laravel y PHP**: Laravel 12.40+ y 13, con PHP 8.3+. 
 
 ## Utilidades incorporadas en este paquete
 
@@ -405,6 +405,8 @@ Puedes indicar cualquier campo listado en `$availableSortFields` para conseguir 
 
 Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente. Cualquier otro valor recibe una respuesta 400.
 
+Para que la paginación sea estable, `$identifierField` siempre se añade como último criterio de orden, de forma ascendente, así que los listados sin `sortField` se ordenan por ese campo. Esto no se aplica si la consulta definida en `createQuery()` usa `distinct`, `groupBy` o `union`, por lo que esas consultas deben definir su propio orden.
+
 #### Configuración "per_page"
 
 Permite especificar un tamaño de página distinto en el listado del recurso.
@@ -419,7 +421,7 @@ Solo se tendrá en cuenta si el recurso se entrega paginado. Si no se desea pagi
 protected bool $paginated = true;
 ```
 
-Si se ha configurado paginación, de manera predeterminada se toma tamaño de página 10.
+Si se ha configurado paginación, de manera predeterminada se toma tamaño de página 10. El valor debe estar entre 1 y 10000; en caso contrario, la respuesta es un 400.
 
 #### Configuración "filters"
 
