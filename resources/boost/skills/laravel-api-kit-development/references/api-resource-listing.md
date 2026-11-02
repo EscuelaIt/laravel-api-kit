@@ -35,7 +35,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 
 ### Wrapping results in a JsonResource
 
-`getResults()` and `findIncluding()` always return raw Eloquent models (or a paginator of models when paginated) — this never changes based on configuration. To reuse an existing `JsonResource` (e.g. the same one your HTTP API uses) from any consumer — a console command, a queued job, an MCP tool — call one of these explicit helpers **after** fetching results:
+`getResults()` and `findIncluding()` return raw Eloquent models (or a paginator of models when paginated) unless `$listResource` is configured. Don't combine `$listResource` with these methods. To reuse an existing `JsonResource` (e.g. the same one your HTTP API uses) from any consumer — a console command, a queued job, an MCP tool — call one of these explicit helpers **after** fetching results:
 
 - **`wrapCollection(Collection $items, string $resourceClass)`** Wraps a plain `Collection` (`getResults()` with `$paginated = false`) via `$resourceClass::collection(...)`.
 - **`wrapPaginated(array $results, string $resourceClass)`** Wraps the paginated array (`['countItems' => ..., 'result' => $paginator]`), preserving pagination metadata via `AbstractPaginator::through()`.

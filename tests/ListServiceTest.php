@@ -921,6 +921,37 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
+    public function itThrowsExceptionWhenRequiredScopeHasNoRelationId(): void
+    {
+        Post::factory()->count(2)->create();
+
+        $this->expectException(MissingRequiredScopeException::class);
+
+        (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration(['belongsTo' => 'greaterThanId'])
+            ->getResults()
+        ;
+    }
+
+    #[Test]
+    public function itAppliesRequiredScopeNotListedInAvailableScopes(): void
+    {
+        Post::factory()->count(2)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setAvailableScopes(['similar'])
+            ->setSearchConfiguration(['belongsTo' => 'greaterThanId', 'relationId' => 100])
+            ->getResults()
+        ;
+
+        $this->assertEquals(0, $results['countItems']);
+    }
+
+    #[Test]
     public function itThrowsExceptionGettingAllIdsWhenRequiredScopeIsMissing(): void
     {
         $this->expectException(MissingRequiredScopeException::class);

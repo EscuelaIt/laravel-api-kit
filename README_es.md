@@ -308,7 +308,7 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
 
 ### Envolver resultados en un JsonResource
 
-`getResults()` y `findIncluding()` siempre devuelven modelos Eloquent puros (o, si está paginado, un paginador de modelos) — esto nunca cambia según la configuración. Si quieres obtener el mismo formato de salida que ya usa tu API HTTP (por ejemplo, reutilizando `InvoiceResource` desde un comando de consola, un job en cola o una tool MCP), `ListService` ofrece tres métodos explícitos para envolver los resultados en un `Illuminate\Http\Resources\Json\JsonResource` **después** de obtenerlos:
+`getResults()` y `findIncluding()` devuelven modelos Eloquent puros (o, si está paginado, un paginador de modelos), salvo que se configure `$listResource`. No combines `$listResource` con estos métodos. Si quieres obtener el mismo formato de salida que ya usa tu API HTTP (por ejemplo, reutilizando `InvoiceResource` desde un comando de consola, un job en cola o una tool MCP), `ListService` ofrece tres métodos explícitos para envolver los resultados en un `Illuminate\Http\Resources\Json\JsonResource` **después** de obtenerlos:
 
 - **`wrapCollection(Collection $items, string $resourceClass)`** Envuelve una `Collection` (resultado de `getResults()` con `$paginated = false`) llamando a `$resourceClass::collection(...)`.
 - **`wrapPaginated(array $results, string $resourceClass)`** Envuelve el array paginado devuelto por `getResults()` (`['countItems' => ..., 'result' => $paginator]`), preservando la metadata de paginación gracias a `AbstractPaginator::through()`.
