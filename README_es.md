@@ -12,7 +12,7 @@ composer require escuelait/laravel-api-kit
 
 Una vez instalado el package Laravel registrará automáticamente el service provider.
 
-**Compatibilidad con Laravel y PHP**: Laravel 12.40+ y 13, con PHP 8.3+. 
+**Compatibilidad con Laravel y PHP**: Laravel 12.69+ o 13.30+, con PHP 8.3+. 
 
 ## Utilidades incorporadas en este paquete
 

@@ -37,8 +37,8 @@
     },
     "require": {
         "php": "^8.3",
-        "illuminate/support": "^12.40|^13.0",
-        "illuminate/http": "^12.40|^13.0",
+        "illuminate/support": "^12.69|^13.30",
+        "illuminate/http": "^12.69|^13.30",
         "negartarh/apiwrapper": "^0.9.1"
     },
     "minimum-stability": "stable",

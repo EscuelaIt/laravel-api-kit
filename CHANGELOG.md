@@ -9,7 +9,7 @@
 
 ### Breaking changes
 
-- Support for PHP 8.1 and 8.2 and for Laravel 9, 10, 11 and versions of Laravel 12 before 12.40 has been dropped. The package now requires PHP 8.3+ and Laravel 12.40+ or 13, the versions tested in CI.
+- Support for PHP 8.1 and 8.2, Laravel 9, 10 and 11, Laravel 12 before 12.69 and Laravel 13 before 13.30 has been dropped. The package now requires PHP 8.3+ and Laravel 12.69+ or 13.30+, the versions tested in CI and the lowest ones without known security advisories.
 - `$availableFilterColumns`, `$availableSortFields`, `$availableScopes` and `$availableIncludes` now default to `[]`, so clients can't filter, sort, apply scopes or include relationships until you list what they can use. These lists also apply to values set with `setSearchConfiguration()` and `setSearchConfigurationValue()`. Custom filters don't depend on them.
 - With `$availableIncludes = null`, only methods with a declared relationship return type (e.g. `: HasMany`) and relationships defined with `resolveRelationUsing()` are loaded. Anything else is ignored without being called, including untyped relationships. Relationships listed in `$availableIncludes` don't need a return type.
 - `ResourceListable` now responds 400 to an invalid `sortDirection`, and to filters that are not arrays or have no valid `name`.
