@@ -253,7 +253,14 @@ class ResourceListableTest extends TestCase
         $this->app->instance('request', Request::create('/posts?'.$queryString, 'GET'));
         Post::factory()->create(['title' => 'Post']);
 
-        $response = $this->resourceControllerClass->list((new ListService())->setListModel(Post::class));
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['title'])
+            ->setAvailableSortFields(['title'])
+            ->setAvailableIncludes(null)
+        ;
+
+        $response = $this->resourceControllerClass->list($service);
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame($expectedItems, json_decode($response->getContent(), true)['data']['countItems']);

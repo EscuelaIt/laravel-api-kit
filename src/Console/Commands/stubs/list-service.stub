@@ -8,4 +8,10 @@ use EscuelaIT\APIKit\ListService;
 class {{ class }} extends ListService
 {
     protected string $listModel{{ model_assignment }};
+
+    // What clients can use in the QueryString. Empty arrays allow nothing.
+    protected ?array $availableFilterColumns = [];
+    protected ?array $availableSortFields = [];
+    protected ?array $availableScopes = [];
+    protected ?array $availableIncludes = [];
 }

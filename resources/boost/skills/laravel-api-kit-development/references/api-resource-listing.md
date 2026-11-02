@@ -24,10 +24,10 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$identifierField`** The database table field to identify resource items, default is 'id'.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. 
-- **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array
-- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array.
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Names that are not relationships are ignored without being called. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded when this property is `null`; untyped relationships must be listed in this array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable.
-- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `null`, allowing sorting by any field. Any other field is ignored without raising an error. For security reasons, it's recommended to explicitly restrict this array.
+- **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `[]`, meaning clients can't filter by any column. List the allowed columns. `null` allows any column and is not recommended. Custom filters don't depend on this array.
+- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `[]`, meaning clients can't apply any scope. List the allowed scopes. `null` allows any scope and is not recommended.
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `[]`, meaning clients can't include any relationship. List the loadable relationships. `null` allows any relationship and is not recommended. With `null`, only methods with a declared relationship return type (e.g. `: HasMany`) are accepted, and untyped relationships are ignored unless they are listed.
+- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `[]`, meaning clients can't sort by any field. List the sortable fields. `null` allows any field and is not recommended. Any other field is ignored without raising an error.
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings. Usually, it is not necessary to set this array manually, as the ResourceListable trait handles it based on the request made to the controller.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
@@ -72,6 +72,8 @@ class InvoiceDraftListService extends ListService
     protected string $listModel = InvoiceDraft::class;
 
     protected ?array $availableFilterColumns = [];
+
+    protected ?array $availableSortFields = [];
 
     protected ?array $availableScopes = [];
 
