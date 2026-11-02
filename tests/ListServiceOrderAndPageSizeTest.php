@@ -93,6 +93,103 @@ class ListServiceOrderAndPageSizeTest extends TestCase
     }
 
     #[Test]
+    public function itUsesDefaultSortWhenNoSortFieldIsRequested(): void
+    {
+        Post::factory()->create(['title' => 'A']);
+        Post::factory()->create(['title' => 'B']);
+
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title', 'desc');
+
+        $this->assertStringEndsWith('order by "title" desc, "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+        $this->assertSame('B', $service->getResults()['result'][0]->title);
+    }
+
+    #[Test]
+    public function itUsesAscendingDirectionByDefaultInDefaultSort(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title');
+
+        $this->assertStringEndsWith('order by "title" asc, "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itUsesDefaultSortConfiguredViaProperties(): void
+    {
+        Post::factory()->create();
+
+        $service = new class extends ListService {
+            protected string $listModel = Post::class;
+            protected ?string $defaultSortField = 'title';
+            protected string $defaultSortDirection = 'desc';
+        };
+
+        $this->assertStringEndsWith('order by "title" desc, "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itPrefersAllowedSortFieldOverDefaultSort(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setDefaultSort('title', 'desc')
+            ->setAvailableSortFields(['status'])
+            ->setSearchConfiguration(['sortField' => 'status', 'sortDirection' => 'asc'])
+        ;
+
+        $this->assertStringEndsWith('order by "status" asc, "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itUsesDefaultDirectionWhenSortFieldIsNotAllowed(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setDefaultSort('title', 'desc')
+            ->setSearchConfiguration(['sortField' => 'status', 'sortDirection' => 'asc'])
+        ;
+
+        $this->assertStringEndsWith('order by "title" desc, "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itDoesNotAddIdentifierWhenItIsTheDefaultSort(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('id', 'desc');
+
+        $this->assertStringEndsWith('order by "id" desc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itCanRemoveDefaultSort(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title', 'desc')->setDefaultSort(null);
+
+        $this->assertStringEndsWith('order by "posts"."id" asc limit 11 offset 0', $this->listQuery($service));
+    }
+
+    #[Test]
+    public function itAppliesDefaultSortToLimitedIds(): void
+    {
+        $post = Post::factory()->create(['title' => 'A']);
+        $last = Post::factory()->create(['title' => 'B']);
+
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title', 'desc')->setMaxIds(1);
+
+        $this->assertSame([$last->id], $service->getAllIds()->all());
+        $this->assertNotSame($post->id, $last->id);
+    }
+
+    #[Test]
     public function itDoesNotUseOrderInCountQuery(): void
     {
         Post::factory()->count(2)->create();

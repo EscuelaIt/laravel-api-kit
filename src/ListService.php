@@ -28,6 +28,8 @@ class ListService
     protected ?array $availableScopes = [];
     protected ?array $availableIncludes = [];
     protected ?array $availableSortFields = [];
+    protected ?string $defaultSortField = null;
+    protected string $defaultSortDirection = 'asc';
     protected ?int $maxPerPage = null;
     protected ?int $maxFilters = null;
     protected ?int $maxIds = 100;
@@ -95,6 +97,14 @@ class ListService
     public function setAvailableSortFields(?array $sortFields): static
     {
         $this->availableSortFields = $sortFields;
+
+        return $this;
+    }
+
+    public function setDefaultSort(?string $sortField, string $sortDirection = 'asc'): static
+    {
+        $this->defaultSortField = $sortField;
+        $this->defaultSortDirection = $sortDirection;
 
         return $this;
     }
@@ -482,13 +492,19 @@ class ListService
     private function applyOrder(): void
     {
         $sortField = $this->searchConfiguration['sortField'];
+        $sortDirection = $this->searchConfiguration['sortDirection'];
 
-        if ($sortField && $this->isSortFieldAllowed($sortField)) {
-            $this->query->orderBy($sortField, $this->searchConfiguration['sortDirection']);
+        if (!$sortField || !$this->isSortFieldAllowed($sortField)) {
+            $sortField = $this->defaultSortField;
+            $sortDirection = $this->defaultSortDirection;
+        }
+
+        if ($sortField) {
+            $this->query->orderBy($sortField, $sortDirection);
         }
 
         // Without a unique last criterion, items can repeat or get lost between pages
-        if ($sortField !== $this->identifierField || !$this->isSortFieldAllowed($sortField)) {
+        if ($sortField !== $this->identifierField) {
             $this->applyIdentifierOrder();
         }
     }

@@ -161,7 +161,7 @@ class ActionServiceTest extends TestCase
         $service->setActionType('testAction', TestAction::class);
 
         // Act
-        $relatedIds = range(1, 150);
+        $relatedIds = Post::query()->pluck('id')->all();
         $result = $service->processAction([
             'type' => 'testAction',
             'relatedIds' => $relatedIds,
@@ -196,7 +196,7 @@ class ActionServiceTest extends TestCase
         $service->setActionType('testAction', TestAction::class);
 
         // Act
-        $relatedIds = range(1, 50);
+        $relatedIds = Post::query()->pluck('id')->all();
         $result = $service->processAction([
             'type' => 'testAction',
             'relatedIds' => $relatedIds,
@@ -231,7 +231,7 @@ class ActionServiceTest extends TestCase
         $service->setActionType('testAction', TestAction::class);
 
         // Act
-        $relatedIds = range(1, 10);
+        $relatedIds = Post::query()->pluck('id')->all();
         $result = $service->processAction([
             'type' => 'testAction',
             'relatedIds' => $relatedIds,

@@ -12,7 +12,7 @@ composer require escuelait/laravel-api-kit
 
 That's it! The package will automatically register its service provider.
 
-**Laravel compatibility**: Laravel 12.69+ or 13.30+, with PHP 8.3+. 
+**Laravel compatibility**: Laravel 12 or 13, with PHP 8.3+. Older laravel versions must use Api Kit 1.x 
 
 ## Built-in Utilities in this Package
 
@@ -313,6 +313,15 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   $service->setAvailableSortFields(['name', 'created_at']);
   ```
+- **`$defaultSortField`** and **`$defaultSortDirection`** Define the order applied when the client doesn't request a sort, or requests a field not allowed by `$availableSortFields`. The default values are `null` and `'asc'`. The field doesn't need to be listed in `$availableSortFields`, e.g.:  
+  ```php
+  protected ?string $defaultSortField = 'created_at';
+  protected string $defaultSortDirection = 'desc';
+  ```
+  You can also configure this using the `setDefaultSort()` method:  
+  ```php
+  $service->setDefaultSort('created_at', 'desc');
+  ```
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the allIds() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
@@ -436,7 +445,9 @@ You can specify any field listed in `$availableSortFields` to achieve the desire
 
 Valid `sortDirection` values are `"asc"` (ascending) and `"desc"` (descending). Any other value gets a 400 response.
 
-To keep pagination stable, `$identifierField` is always added as the last sort criterion, in ascending order, so listings without `sortField` are sorted by it. This is skipped if the query defined in `createQuery()` uses `distinct`, `groupBy` or `union`, so those queries should define their own order.
+Listings without a valid `sortField` use the default order configured with `$defaultSortField`. Don't define it with `orderBy()` in `createQuery()`, because that order would take priority over the one requested by the client.
+
+To keep pagination stable, `$identifierField` is always added as the last sort criterion, in ascending order, so listings without any other order are sorted by it. This is skipped if the query defined in `createQuery()` uses `distinct`, `groupBy` or `union`, so those queries should define their own order.
 
 #### "per_page" Configuration
 

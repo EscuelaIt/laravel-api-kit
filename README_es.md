@@ -312,6 +312,15 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
   protected ?string $requiredScope = 'byTeam';
   ```
   > **`$requiredScope` no es un mecanismo de autorización.** Solo garantiza que la consulta esté filtrada, pero el cliente elige el `relationId` que envía, así que puede pedir los datos de otro equipo o usuario. Para limitar lo que ve cada usuario, aplícalo en `createQuery()`, por ejemplo con `where('team_id', Auth::user()->team_id)`, o con tus middleware y policies.
+- **`$defaultSortField`** y **`$defaultSortDirection`** Indican el orden que se aplica cuando el cliente no solicita ninguno, o solicita un campo que `$availableSortFields` no permite. Los valores predeterminados son `null` y `'asc'`. No hace falta incluir el campo en `$availableSortFields`:
+  ```php
+  protected ?string $defaultSortField = 'created_at';
+  protected string $defaultSortDirection = 'desc';
+  ```
+  También se puede configurar con el método `setDefaultSort()`:
+  ```php
+  $service->setDefaultSort('created_at', 'desc');
+  ```
 - **`$searchConfiguration`** Es un array de datos de configuración de la búsqueda en los listados que está pensado para personalizar de manera fina las búsquedas con múltiples parámetros. Esta propiedad en el `ListService` almacena inicialmente la configuración predeterminada y existe un método `setSearchConfiguration()` que permite enviarle una configuración personalizada para un listado en particular, que hace un merge de los datos predeterminados y los nuevos datos pasados al método.
 - **`$maxFilters`** Indica el número máximo de filtros permitidos por consulta. El valor predeterminado es `null`, lo que significa que no hay límite. Si se indica un entero positivo, los filtros que superen ese número se descartan sin lanzar un error.
 - **`$maxIds`** Indica el número máximo de identificadores que se devuelven al llamar al método `allIds()` del trait `ResourceListable`, para evitar devolver tantos elementos que puedan sobrecargar el sistema. El valor predeterminado es 100. Se puede asignar `null` para no tener límite.
@@ -427,7 +436,9 @@ Puedes indicar cualquier campo listado en `$availableSortFields` para conseguir 
 
 Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente. Cualquier otro valor recibe una respuesta 400.
 
-Para que la paginación sea estable, `$identifierField` siempre se añade como último criterio de orden, de forma ascendente, así que los listados sin `sortField` se ordenan por ese campo. Esto no se aplica si la consulta definida en `createQuery()` usa `distinct`, `groupBy` o `union`, por lo que esas consultas deben definir su propio orden.
+Los listados sin un `sortField` válido usan el orden predeterminado configurado con `$defaultSortField`. No lo definas con `orderBy()` en `createQuery()`, porque ese orden tendría prioridad sobre el que pida el cliente.
+
+Para que la paginación sea estable, `$identifierField` siempre se añade como último criterio de orden, de forma ascendente, así que los listados sin otro orden se ordenan por ese campo. Esto no se aplica si la consulta definida en `createQuery()` usa `distinct`, `groupBy` o `union`, por lo que esas consultas deben definir su propio orden.
 
 #### Configuración "per_page"
 
