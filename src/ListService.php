@@ -213,7 +213,8 @@ class ListService
             return;
         }
 
-        if ($this->searchConfiguration['belongsTo'] !== $this->requiredScope) {
+        // Without relationId the scope would not be applied, see applyBelongsTo()
+        if ($this->searchConfiguration['belongsTo'] !== $this->requiredScope || '' == $this->searchConfiguration['relationId']) {
             throw new MissingRequiredScopeException($this->requiredScope);
         }
     }
@@ -331,6 +332,10 @@ class ListService
 
     protected function isScopeAllowed(string $scopeName): bool
     {
+        if ($scopeName === $this->requiredScope) {
+            return true;
+        }
+
         if (null !== $this->availableScopes) {
             return in_array($scopeName, $this->availableScopes);
         }
