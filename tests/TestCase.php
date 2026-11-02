@@ -28,11 +28,21 @@ class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
-        // Configura DB de testing (SQLite in-memory)
+        // Configura DB de testing (SQLite in-memory, salvo que TEST_DB_DRIVER indique otro motor)
+        $driver = env('TEST_DB_DRIVER', 'sqlite');
+
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', [
+        $app['config']->set('database.connections.testing', 'sqlite' === $driver ? [
             'driver' => 'sqlite',
             'database' => ':memory:',
+            'prefix' => '',
+        ] : [
+            'driver' => $driver,
+            'host' => env('TEST_DB_HOST', '127.0.0.1'),
+            'port' => env('TEST_DB_PORT'),
+            'database' => env('TEST_DB_DATABASE', 'testing'),
+            'username' => env('TEST_DB_USERNAME', 'testing'),
+            'password' => env('TEST_DB_PASSWORD', 'testing'),
             'prefix' => '',
         ]);
     }

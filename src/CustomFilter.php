@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 abstract class CustomFilter
 {
+    use BuildsLikeQueries;
+
     protected $searchConfiguration;
     protected $filterName;
 

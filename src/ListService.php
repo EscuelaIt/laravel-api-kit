@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 
 class ListService
 {
+    use BuildsLikeQueries;
+
     protected string $listModel;
     protected ?string $listResource = null;
     protected string $identifierField = 'id';

@@ -369,12 +369,7 @@ Esta configuración en realidad no realiza ninguna búsqueda por si sola. La tie
 ```php
 protected function applyKeywordFilter(?string $keyword): void 
 {
-    if (!empty($keyword)) {
-        $keyword = '%' . $keyword . '%';
-        $this->query->where(function ($query) use ($keyword) {
-            $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
-        });
-    }
+    $this->whereContains($this->query, ['name', 'email'], $keyword);
 }
 ```
 
@@ -391,19 +386,34 @@ protected function applyKeywordFilter(?string $keyword): void
 Por supuesto, necesitarás implementar el scope en el correspondiente modelo, indicando la lógica para esta consulta. Aquí puedes ver una implementación del scope similar que podrías usar en tu modelo. Consulta la documentación de Laravel para encontrar más información sobre la creación de scopes.
 
 ```php
-public function scopeSimilar($query, $keyword)
-{
-    if (empty($keyword)) {
-        return $query;
-    }
+use EscuelaIT\APIKit\BuildsLikeQueries;
 
-    $keyword = '%' . $keyword . '%';
-    return $query->where(function ($q) use ($keyword) {
-        $q->where('title', 'like', $keyword)
-            ->orWhere('status', 'like', $keyword);
-    });
+class Post extends Model
+{
+    use BuildsLikeQueries;
+
+    public function scopeSimilar($query, $keyword)
+    {
+        return $this->whereContains($query, ['title', 'status'], $keyword);
+    }
 }
 ```
+
+##### Buscar con LIKE de forma segura
+
+`ListService`, `CustomFilter` y cualquier clase que use el trait `EscuelaIT\APIKit\BuildsLikeQueries`, como un modelo, tienen dos métodos para buscar texto:
+
+- **`whereContains($query, $columns, $value)`** Encuentra valores que contienen el texto (`%texto%`). No puede usar un índice normal, así que puede ser lento en tablas grandes.
+- **`whereStartsWith($query, $columns, $value)`** Encuentra valores que empiezan por el texto (`texto%`). Puede usar un índice normal, así que es preferible cuando encaje con tu búsqueda.
+
+`$columns` es el nombre de una columna o un array de nombres. Los dos métodos:
+
+- Escapan `%`, `_` y `\`, de modo que quien busque `100%` solo encuentra ese texto.
+- Agrupan varias columnas entre paréntesis, para que las condiciones `OR` no se salten las restricciones de `createQuery()`.
+- No modifican la consulta si el valor está vacío o no es escalar.
+- No distinguen mayúsculas en PostgreSQL. En otros motores depende de la collation de la columna y de las reglas del propio motor.
+
+> Evita escribir `'%' . $value . '%'` a mano: los clientes podrían usar comodines, y `%` coincidiría con todas las filas.
 
 #### Configuración "sortField" y "sortDirection"
 
@@ -532,10 +542,7 @@ class TitleContainsFilter extends CustomFilter
     
     public function apply(Builder $query): void
     {
-        $value = (string) $this->getFilterValue();
-        if ($value !== '') {
-            $query->where('title', 'like', '%' . $value . '%');
-        }
+        $this->whereContains($query, 'title', $this->getFilterValue());
     }
 }
 ```

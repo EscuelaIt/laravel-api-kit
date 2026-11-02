@@ -45,13 +45,12 @@ class TitleContainsFilter extends CustomFilter
     
     public function apply(Builder $query): void
     {
-        $value = (string) $this->getFilterValue();
-        if ($value !== '') {
-            $query->where('title', 'like', '%' . $value . '%');
-        }
+        $this->whereContains($query, 'title', $this->getFilterValue());
     }
 }
 ```
+
+`whereContains($query, $columns, $value)` and `whereStartsWith($query, $columns, $value)` escape LIKE wildcards, group several columns and ignore empty values. They are available in `CustomFilter`, `ListService` and any class using the `BuildsLikeQueries` trait. Use them instead of writing `'%' . $value . '%'` by hand. `whereContains()` can't use a regular index, so prefer `whereStartsWith()` when it fits the search.
 
 **Other available `CustomFilter` methods**:
 - `getFilterName()`: Returns the filter name.

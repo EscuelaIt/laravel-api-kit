@@ -379,12 +379,7 @@ This configuration doesn’t perform any search by itself. You must enable it in
 ```php
 protected function applyKeywordFilter(?string $keyword): void 
 {
-    if (!empty($keyword)) {
-        $keyword = '%' . $keyword . '%';
-        $this->query->where(function ($query) use ($keyword) {
-            $query->where('name', 'like', $keyword)->orWhere('email', 'like', $keyword);
-        });
-    }
+    $this->whereContains($this->query, ['name', 'email'], $keyword);
 }
 ```
 
@@ -400,19 +395,34 @@ protected function applyKeywordFilter(?string $keyword): void
 You need to implement this scope with your query logic in the corresponding model. Here's an example implementation:
 
 ```php
-public function scopeSimilar($query, $keyword)
-{
-    if (empty($keyword)) {
-        return $query;
-    }
+use EscuelaIT\APIKit\BuildsLikeQueries;
 
-    $keyword = '%' . $keyword . '%';
-    return $query->where(function ($q) use ($keyword) {
-        $q->where('title', 'like', $keyword)
-            ->orWhere('status', 'like', $keyword);
-    });
+class Post extends Model
+{
+    use BuildsLikeQueries;
+
+    public function scopeSimilar($query, $keyword)
+    {
+        return $this->whereContains($query, ['title', 'status'], $keyword);
+    }
 }
 ```
+
+##### Searching with LIKE safely
+
+`ListService`, `CustomFilter` and any class using the `EscuelaIT\APIKit\BuildsLikeQueries` trait, such as a model, have two helpers for text searches:
+
+- **`whereContains($query, $columns, $value)`** Finds values containing the text (`%text%`). It can't use a regular index, so it can be slow on large tables.
+- **`whereStartsWith($query, $columns, $value)`** Finds values starting with the text (`text%`). It can use a regular index, so prefer it when it fits your search.
+
+`$columns` is a column name or an array of them. Both helpers:
+
+- Escape `%`, `_` and `\`, so a client searching for `100%` only finds that text.
+- Group several columns in parentheses, so the `OR` conditions can't skip the constraints of `createQuery()`.
+- Leave the query unchanged if the value is empty or not scalar.
+- Are not case sensitive on PostgreSQL. On other engines it depends on the collation of the column and the engine's own rules.
+
+> Avoid writing `'%' . $value . '%'` by hand: clients could use wildcards, so `%` would match every row.
 
 #### "sortField" and "sortDirection" Configuration
 
@@ -550,10 +560,7 @@ class TitleContainsFilter extends CustomFilter
     
     public function apply(Builder $query): void
     {
-        $value = (string) $this->getFilterValue();
-        if ($value !== '') {
-            $query->where('title', 'like', '%' . $value . '%');
-        }
+        $this->whereContains($query, 'title', $this->getFilterValue());
     }
 }
 ```

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `BuildsLikeQueries` trait with `whereContains()` and `whereStartsWith()`, available in `ListService` and `CustomFilter`, to search with LIKE escaping wildcards.
+
 ## 2.0.0 - Unreleased
 
 ### Security

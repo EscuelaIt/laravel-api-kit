@@ -256,6 +256,7 @@ class ListServiceOrderAndPageSizeTest extends TestCase
         $log = DB::getQueryLog();
         DB::disableQueryLog();
 
-        return end($log)['query'];
+        // MySQL y MariaDB envuelven los identificadores con acentos graves
+        return str_replace('`', '"', end($log)['query']);
     }
 }

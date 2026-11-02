@@ -13,9 +13,6 @@ class TitleContainsFilter extends CustomFilter
 
     public function apply(Builder $query): void
     {
-        $value = (string) $this->getFilterValue();
-        if ('' !== $value) {
-            $query->where('title', 'like', '%'.$value.'%');
-        }
+        $this->whereContains($query, 'title', $this->getFilterValue());
     }
 }
