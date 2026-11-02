@@ -47,6 +47,10 @@ class MakeListServiceCommandTest extends TestCase
         $this->assertStringContainsString('namespace App\Services;', $contents);
         $this->assertStringContainsString('class UserListService extends ListService', $contents);
         $this->assertStringContainsString('protected string $listModel;', $contents);
+        $this->assertStringContainsString('protected ?array $availableFilterColumns = [];', $contents);
+        $this->assertStringContainsString('protected ?array $availableSortFields = [];', $contents);
+        $this->assertStringContainsString('protected ?array $availableScopes = [];', $contents);
+        $this->assertStringContainsString('protected ?array $availableIncludes = [];', $contents);
         $this->assertStringNotContainsString('use App\Models', $contents);
     }
 

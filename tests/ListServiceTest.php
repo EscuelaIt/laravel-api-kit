@@ -109,6 +109,7 @@ class ListServiceTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableSortFields(['title'])
             ->setSearchConfiguration([
                 'sortField' => 'title',
                 'sortDirection' => 'asc',
@@ -181,6 +182,7 @@ class ListServiceTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['status'])
             ->setSearchConfiguration([
                 'filters' => [
                     [
@@ -297,6 +299,7 @@ class ListServiceTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableScopes(['greaterThanId'])
             ->setSearchConfiguration([
                 'belongsTo' => 'greaterThanId',
                 'relationId' => 2,
@@ -439,6 +442,7 @@ class ListServiceTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['status', 'title'])
             ->setMaxFilters(1)
             ->setSearchConfiguration([
                 'filters' => [
@@ -473,6 +477,7 @@ class ListServiceTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['status'])
             ->setMaxFilters(5)
             ->setSearchConfiguration([
                 'filters' => [
@@ -654,12 +659,115 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
+    public function itIgnoresClientOptionsByDefault(): void
+    {
+        $post = Post::factory()->create(['title' => 'A', 'status' => 'draft']);
+        Post::factory()->create(['title' => 'B', 'status' => 'published']);
+        Comment::factory()->create(['post_id' => $post->id]);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration([
+                'filters' => [['name' => 'status', 'value' => 'published', 'active' => true]],
+                'sortField' => 'title',
+                'sortDirection' => 'desc',
+                'belongsTo' => 'greaterThanId',
+                'relationId' => 100,
+                'include' => 'comments',
+            ])
+            ->getResults()
+        ;
+
+        $this->assertEquals(2, $results['countItems']);
+        $this->assertSame('A', $results['result'][0]->title);
+        $this->assertSame([], $results['result'][0]->getRelations());
+    }
+
+    #[Test]
+    public function itIgnoresDangerousIncludeByDefault(): void
+    {
+        Post::factory()->create();
+
+        (new ListService())
+            ->setListModel(Post::class)
+            ->setSearchConfiguration(['include' => 'truncate'])
+            ->getResults()
+        ;
+
+        $this->assertSame(1, Post::query()->count());
+    }
+
+    #[Test]
+    public function itAllowsAnyFilterAndScopeWhenAvailableListsAreNull(): void
+    {
+        Post::factory()->create(['id' => 1, 'status' => 'published']);
+        Post::factory()->create(['id' => 2, 'status' => 'published']);
+        Post::factory()->create(['id' => 3, 'status' => 'draft']);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableFilterColumns(null)
+            ->setAvailableScopes(null)
+            ->setSearchConfiguration([
+                'filters' => [['name' => 'status', 'value' => 'published', 'active' => true]],
+                'belongsTo' => 'greaterThanId',
+                'relationId' => 1,
+            ])
+            ->getResults()
+        ;
+
+        $this->assertEquals(1, $results['countItems']);
+        $this->assertSame(2, $results['result'][0]->id);
+    }
+
+    #[Test]
+    public function itIgnoresFilterColumnNotIncludedInAvailableFilterColumns(): void
+    {
+        Post::factory()->create(['title' => 'A', 'status' => 'draft']);
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['title'])
+            ->setSearchConfiguration([
+                'filters' => [['name' => 'status', 'value' => 'published', 'active' => true]],
+            ])
+            ->getResults()
+        ;
+
+        $this->assertEquals(1, $results['countItems']);
+    }
+
+    #[Test]
+    public function itAppliesCustomFiltersWithDefaultAvailableLists(): void
+    {
+        Post::factory()->create(['title' => 'Laravel']);
+        Post::factory()->create(['title' => 'Other']);
+
+        $service = new class extends ListService {
+            protected string $listModel = Post::class;
+
+            protected function customFilters(): array
+            {
+                return [new TitleContainsFilter()];
+            }
+        };
+
+        $results = $service
+            ->setSearchConfiguration(['filters' => [['name' => 'title_contains', 'value' => 'Lara', 'active' => true]]])
+            ->getResults()
+        ;
+
+        $this->assertEquals(1, $results['countItems']);
+    }
+
+    #[Test]
     public function itIgnoresMalformedFilters(): void
     {
         Post::factory()->count(2)->create();
 
         $results = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(null)
             ->setSearchConfiguration(['filters' => [
                 'abc',
                 ['active' => true, 'value' => 'x'],
@@ -678,6 +786,7 @@ class ListServiceTest extends TestCase
 
         $results = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(null)
             ->setSearchConfiguration(['filters' => [['name' => 'title', 'value' => 'Other']]])
             ->getResults()
         ;
@@ -692,6 +801,7 @@ class ListServiceTest extends TestCase
 
         $results = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['title'])
             ->setSearchConfiguration(['filters' => [
                 ['name' => 'title', 'active' => true],
             ]])
@@ -724,13 +834,14 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
-    public function itSortsByAnyFieldWhenAvailableSortFieldsIsNotConfigured(): void
+    public function itSortsByAnyFieldWhenAvailableSortFieldsIsNull(): void
     {
         Post::factory()->create(['title' => 'A']);
         Post::factory()->create(['title' => 'B']);
 
         $results = (new ListService())
             ->setListModel(Post::class)
+            ->setAvailableSortFields(null)
             ->setSearchConfiguration(['sortField' => 'title', 'sortDirection' => 'desc'])
             ->getResults()
         ;
@@ -944,6 +1055,21 @@ class ListServiceTest extends TestCase
             ->setListModel(Post::class)
             ->setRequiredScope('greaterThanId')
             ->setAvailableScopes(['similar'])
+            ->setSearchConfiguration(['belongsTo' => 'greaterThanId', 'relationId' => 100])
+            ->getResults()
+        ;
+
+        $this->assertEquals(0, $results['countItems']);
+    }
+
+    #[Test]
+    public function itAppliesRequiredScopeWithDefaultAvailableScopes(): void
+    {
+        Post::factory()->count(2)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
             ->setSearchConfiguration(['belongsTo' => 'greaterThanId', 'relationId' => 100])
             ->getResults()
         ;

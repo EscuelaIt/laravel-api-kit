@@ -283,19 +283,19 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
   ```php
   $service->setMaxPerPage(50);
   ```
-- **`$availableFilterColumns`** indica qué columnas del recurso permiten búsquedas para filtrados. El valor predeterminado es null, lo que indica que permite filtrar por cualquier campo. Por seguridad se recomienda limitar este valor para restringir la búsqueda en las columnas que se desee de manera explícita. Las columnas se entregan en un array de cadenas:
+- **`$availableFilterColumns`** indica qué columnas del recurso permiten búsquedas para filtrados. El valor predeterminado es `[]`, lo que indica que los clientes no pueden filtrar por ninguna columna. Las columnas permitidas se entregan en un array de cadenas. También se puede usar `null` para permitir cualquier columna (no recomendado):
   ```php
-  protected array $availableFilterColumns = ['is_admin', 'country'];
+  protected ?array $availableFilterColumns = ['is_admin', 'country'];
   ```
-- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
+- **`$availableScopes`** Indica qué scopes se pueden aplicar mediante las configuraciones `belongsTo` y `relationId`. El valor predeterminado es `[]`, lo que indica que los clientes no pueden aplicar ningún scope. También se puede usar `null` para permitir cualquier scope (no recomendado):  
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Los nombres que no son relaciones se ignoran sin llamarlos. Cuando esta propiedad es `null`, solo se cargan los métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`); las relaciones sin tipo deben listarse en este array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Indica qué relaciones se pueden incluir mediante la variable `include` del QueryString. El valor predeterminado es `[]`, lo que indica que los clientes no pueden incluir ninguna relación. También se puede usar `null` para permitir cualquier relación (no recomendado):  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
-- **`$availableSortFields`** Indica qué campos se pueden usar para ordenar mediante la variable `sortField` del QueryString. El valor predeterminado es `null`, lo que permite ordenar por cualquier campo. Cualquier otro campo se ignora sin lanzar un error, y el listado se devuelve sin ese orden. Por seguridad se recomienda limitar este array a los campos que se deban poder ordenar:
+- **`$availableSortFields`** Indica qué campos se pueden usar para ordenar mediante la variable `sortField` del QueryString. El valor predeterminado es `[]`, lo que indica que los clientes no pueden ordenar por ningún campo. También se puede usar `null` para permitir cualquier campo (no recomendado). Cualquier otro campo se ignora sin lanzar un error, y el listado se devuelve sin ese orden:
   ```php
   protected ?array $availableSortFields = ['name', 'created_at'];
   ```
@@ -401,7 +401,7 @@ Estas dos configuraciones en conjunto permiten definir el órden de los resultad
 example.com/users?sortField=name&sortDirection=desc
 ```
 
-Puedes indicar cualquier campo del modelo para conseguir que el orden deseado en el listado, salvo que `$availableSortFields` limite los campos permitidos.
+Puedes indicar cualquier campo listado en `$availableSortFields` para conseguir el orden deseado en el listado.
 
 Los valores de `sortDirection` posibles son "`asc`" y "`desc`", para orden ascendente y descendente. Cualquier otro valor recibe una respuesta 400.
 
@@ -429,10 +429,10 @@ La configuración "`filters`" permite activar cualquier número de filtros media
 - `name`: columna para el filtrado
 - `value`: valor que se busca en esa columna
 
-Para que el filtro se procese, además de tener active a true, es necesario que la columna esté listada en el array `$availableFilterColumns` del `ListService`, o que esa propiedad sea `null`, en cuyo caso no estará restringiendo las columnas posibles para el listado.
+Para que el filtro se procese, además de tener active a true, es necesario que la columna esté listada en el array `$availableFilterColumns` del `ListService`, o que esa propiedad sea `null`, en cuyo caso no estará restringiendo las columnas posibles para el listado. El valor predeterminado es `[]`, así que no se puede filtrar por ninguna columna hasta listarla. Los filtros personalizados no dependen de este array.
 
 
-> Para garantizar una mayor privacidad y seguridad es muy recomendable realizar la configuración del array `$availableFilterColumns` del `ListService` para evitar que el usuario pueda activar más filtros de los deseados.
+> Para garantizar una mayor privacidad y seguridad evita asignar `null` a `$availableFilterColumns` en el `ListService`, para evitar que el usuario pueda activar más filtros de los deseados.
 
 Por ejemplo, si el array de filtros enviado por QueryString es como este:
 
@@ -614,7 +614,7 @@ Entonces Se activará un scope llamado byTeam en el modelo del recurso y se le p
 
 Similar to `$availableFilterColumns`, you can restrict which scopes are allowed to be applied via the `belongsTo` configuration by setting the `$availableScopes` property.
 
-By default, `$availableScopes` is `null`, which means any scope can be applied via QueryString. For security reasons, it's recommended to explicitly define which scopes are allowed:
+De manera predeterminada, `$availableScopes` es `[]`, lo que significa que no se puede aplicar ningún scope mediante el QueryString. Define qué scopes se permiten:
 
 ```php
 protected ?array $availableScopes = ['byTeam', 'published'];
@@ -622,7 +622,7 @@ protected ?array $availableScopes = ['byTeam', 'published'];
 
 With this configuration, only the `byTeam` and `published` scopes can be applied. Any attempt to apply a different scope via QueryString will be ignored.
 
-> **For enhanced security, it's highly recommended to configure the `$availableScopes` array in `ListService`** to prevent users from enabling unintended scopes that might expose sensitive data or cause undesired filtering behavior.
+> **Por seguridad, evita asignar `null` a `$availableScopes`**, para impedir que los usuarios activen scopes no previstos que puedan exponer datos sensibles o filtrar de forma no deseada.
 
 #### "include" Configuration
 
@@ -638,7 +638,7 @@ You can specify multiple relationships separated by commas. The data will be eag
 
 Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
 
-De manera predeterminada, `$availableIncludes` es `null`, lo que permite incluir cualquier relación mediante el QueryString. Solo se cargan los métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`), y lo demás se ignora sin llamarlo. Por seguridad y rendimiento, se recomienda definir de forma explícita qué relaciones se permiten:
+De manera predeterminada, `$availableIncludes` es `[]`, lo que significa que no se puede incluir ninguna relación mediante el QueryString. Define qué relaciones se permiten:
 
 ```php
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];
@@ -667,7 +667,7 @@ This will return posts with their related comments and authors eager-loaded.
 
 If `$availableIncludes` is set to `['comments']` but you request `?include=comments,author`, only the `comments` relationship will be included. The `author` relationship will be ignored because it's not in the allowed list.
 
-> **For enhanced security and performance, it's highly recommended to configure the `$availableIncludes` array in `ListService`** to prevent users from eager-loading potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
+> **Por seguridad y rendimiento, evita asignar `null` a `$availableIncludes`**. Con `null`, los clientes pueden cargar cualquier relación, y solo se aceptan métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`). Las relaciones sin tipo se ignoran, salvo que las incluyas en `$availableIncludes`. Además, permitiría a los usuarios cargar relaciones costosas que afecten al rendimiento o expongan datos sensibles de las entidades relacionadas.
 
 ## Resource Actions
 

@@ -289,19 +289,19 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   $service->setMaxPerPage(50);
   ```
-- **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `null`, allowing filtering by any field. For security reasons, it’s recommended to explicitly restrict this array to only the columns that should be searchable, e.g.:  
+- **`$availableFilterColumns`** Specifies which columns of the resource are available for filtering. The default value is `[]`, meaning clients can't filter by any column. List the columns that should be searchable, or set it to `null` to allow any column (not recommended), e.g.:  
   ```php
   protected ?array $availableFilterColumns = ['is_admin', 'country'];
   ```
-- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `null`, allowing any scope to be applied. For security reasons, it's recommended to explicitly restrict this array to only the scopes that should be allowed, e.g.:  
+- **`$availableScopes`** Specifies which scopes are allowed to be applied via the `belongsTo` and `relationId` configurations. The default value is `[]`, meaning clients can't apply any scope. List the scopes that should be allowed, or set it to `null` to allow any scope (not recommended), e.g.:  
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Names that are not relationships are ignored without being called. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded when this property is `null`; untyped relationships must be listed in this array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `[]`, meaning clients can't include any relationship. List the relationships that should be loadable, or set it to `null` to allow any relationship (not recommended), e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
-- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `null`, allowing sorting by any field. Any other field is ignored without raising an error, and the listing is returned without that ordering. For security reasons, it's recommended to explicitly restrict this array to only the fields that should be sortable, e.g.:  
+- **`$availableSortFields`** Specifies which fields are allowed for sorting via the `sortField` QueryString parameter. The default value is `[]`, meaning clients can't sort by any field. List the fields that should be sortable, or set it to `null` to allow any field (not recommended). Any other field is ignored without raising an error, and the listing is returned without that ordering, e.g.:  
   ```php
   protected ?array $availableSortFields = ['name', 'created_at'];
   ```
@@ -414,7 +414,7 @@ These two configurations together define the order of search results.
 example.com/users?sortField=name&sortDirection=desc
 ```
 
-You can specify any model field to achieve the desired listing order, unless `$availableSortFields` restricts the allowed fields.
+You can specify any field listed in `$availableSortFields` to achieve the desired listing order.
 
 Valid `sortDirection` values are `"asc"` (ascending) and `"desc"` (descending). Any other value gets a 400 response.
 
@@ -450,9 +450,9 @@ The `"filters"` configuration allows enabling any number of filters via an array
 - **`name`**: Column for filtering.
 - **`value`**: Value to search for in that column.
 
-For a filter to be processed (with `active: true`), the column must be listed in the `ListService`’s `$availableFilterColumns` array, or that property must be `null` (allowing any column).
+For a filter to be processed (with `active: true`), the column must be listed in the `ListService`’s `$availableFilterColumns` array, or that property must be `null` (allowing any column). The default value is `[]`, so no column can be filtered until you list it. Custom filters don't depend on this array.
 
-> **For enhanced privacy and security, it’s highly recommended to configure the `$availableFilterColumns` array in `ListService`** to prevent users from enabling unintended filters.
+> **For enhanced privacy and security, avoid setting `$availableFilterColumns` to `null`**, to prevent users from enabling unintended filters.
 
 **Example**: If the QueryString filters array is:
 
@@ -625,7 +625,7 @@ This will activate a scope named `byTeam` on the resource model, passing `2` as 
 
 Similar to `$availableFilterColumns`, you can restrict which scopes are allowed to be applied via the `belongsTo` configuration by setting the `$availableScopes` property.
 
-By default, `$availableScopes` is `null`, which means any scope can be applied via QueryString. For security reasons, it's recommended to explicitly define which scopes are allowed:
+By default, `$availableScopes` is `[]`, which means no scope can be applied via QueryString. Define which scopes are allowed:
 
 ```php
 protected ?array $availableScopes = ['byTeam', 'published'];
@@ -633,7 +633,7 @@ protected ?array $availableScopes = ['byTeam', 'published'];
 
 With this configuration, only the `byTeam` and `published` scopes can be applied. Any attempt to apply a different scope via QueryString will be ignored.
 
-> **For enhanced security, it's highly recommended to configure the `$availableScopes` array in `ListService`** to prevent users from enabling unintended scopes that might expose sensitive data or cause undesired filtering behavior.
+> **For enhanced security, avoid setting `$availableScopes` to `null`**, to prevent users from enabling unintended scopes that might expose sensitive data or cause undesired filtering behavior.
 
 #### "include" Configuration
 
@@ -649,7 +649,7 @@ You can specify multiple relationships separated by commas. The data will be eag
 
 Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
 
-By default, `$availableIncludes` is `null`, which means any relationship can be included via QueryString. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded, and anything else is ignored without being called. For security and performance reasons, it's recommended to explicitly define which relationships are allowed:
+By default, `$availableIncludes` is `[]`, which means no relationship can be included via QueryString. Define which relationships are allowed:
 
 ```php
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];
@@ -678,7 +678,7 @@ This will return posts with their related comments and authors eager-loaded.
 
 If `$availableIncludes` is set to `['comments']` but you request `?include=comments,author`, only the `comments` relationship will be included. The `author` relationship will be ignored because it's not in the allowed list.
 
-> **For enhanced security and performance, it's highly recommended to configure the `$availableIncludes` array in `ListService`** to prevent users from eager-loading potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
+> **For enhanced security and performance, avoid setting `$availableIncludes` to `null`**. With `null`, clients can load any relationship, and only methods with a declared relationship return type (e.g. `: HasMany`) are accepted. Untyped relationships are ignored unless you list them in `$availableIncludes`. It also allows users to eager-load potentially expensive relationships that might impact application performance or expose sensitive data through related entities.
 
 ### List Service methods
 
@@ -700,6 +700,7 @@ This method allows you to set individual properties of the `$searchConfiguration
 ```php
 $listService = new ListService();
 $listService->setListModel(Post::class)
+    ->setAvailableSortFields(['created_at'])
     ->setSearchConfigurationValue('keyword', 'laravel')
     ->setSearchConfigurationValue('perPage', 20)
     ->setSearchConfigurationValue('sortField', 'created_at')
@@ -707,6 +708,8 @@ $listService->setListModel(Post::class)
 
 $results = $listService->getResults();
 ```
+
+The `$available*` lists also apply to values set with this method, so `created_at` must be listed in `$availableSortFields` for the sort to be applied.
 
 - This method provides a convenient alternative to `setSearchConfiguration()` when setting a single value
 - Null values are ignored and will not update the configuration

@@ -22,10 +22,10 @@ class ListService
     protected string $identifierField = 'id';
     protected $query;
     protected bool $paginated = true;
-    protected ?array $availableFilterColumns = null;
-    protected ?array $availableScopes = null;
-    protected ?array $availableIncludes = null;
-    protected ?array $availableSortFields = null;
+    protected ?array $availableFilterColumns = [];
+    protected ?array $availableScopes = [];
+    protected ?array $availableIncludes = [];
+    protected ?array $availableSortFields = [];
     protected ?int $maxPerPage = null;
     protected ?int $maxFilters = null;
     protected ?int $maxIds = 100;
@@ -58,6 +58,13 @@ class ListService
     public function setPaginated(bool $paginated): ListService
     {
         $this->paginated = $paginated;
+
+        return $this;
+    }
+
+    public function setAvailableFilterColumns(?array $columns): ListService
+    {
+        $this->availableFilterColumns = $columns;
 
         return $this;
     }
