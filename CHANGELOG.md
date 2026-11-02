@@ -1,13 +1,13 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 - 2026-11-02
 
 ### Added
 
 - `$defaultSortField`, `$defaultSortDirection` and `setDefaultSort()`, to define the order of listings when the client doesn't request a valid one.
 - `BuildsLikeQueries` trait with `whereContains()` and `whereStartsWith()`, available in `ListService` and `CustomFilter`, to search with LIKE escaping wildcards.
 
-## 2.0.0 - Unreleased
+## 2.0.0 - 2026-11-02
 
 ### Security
 
