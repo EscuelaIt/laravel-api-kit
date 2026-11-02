@@ -212,7 +212,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Names that are not relationships are ignored without being called. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded when this property is `null`; untyped relationships must be listed in this array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```

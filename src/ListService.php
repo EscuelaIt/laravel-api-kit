@@ -7,6 +7,8 @@ namespace EscuelaIT\APIKit;
 use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
 use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
@@ -410,10 +412,54 @@ class ListService
     private function filterAllowedIncludes(array $includes): array
     {
         if (null === $this->availableIncludes) {
-            return $includes;
+            return array_values(array_filter($includes, fn ($include) => $this->isLoadableRelation($include)));
         }
 
         return array_values(array_intersect($includes, $this->availableIncludes));
+    }
+
+    /**
+     * Eloquent calls each eager load name as a method on the model, and models forward
+     * unknown methods to the query builder, so "truncate" would empty the table.
+     * Names coming from the request must be checked before reaching with().
+     */
+    private function isLoadableRelation(string $include): bool
+    {
+        $model = $this->query->getModel();
+
+        foreach (explode('.', Str::before($include, ':')) as $name) {
+            if (!$this->isRelationMethod($model, $name)) {
+                return false;
+            }
+
+            $relation = $model->newInstance()->{$name}();
+            if (!$relation instanceof Relation) {
+                return false;
+            }
+
+            $model = $relation->getRelated();
+        }
+
+        return true;
+    }
+
+    private function isRelationMethod(Model $model, string $name): bool
+    {
+        if (!method_exists($model, $name)) {
+            // Relations defined with resolveRelationUsing()
+            return $model->isRelation($name);
+        }
+
+        $method = new \ReflectionMethod($model, $name);
+        if (!$method->isPublic() || $method->isStatic() || Model::class === $method->getDeclaringClass()->getName()) {
+            return false;
+        }
+
+        // Only the declared return type is checked, because finding out what
+        // an untyped method returns would require running it.
+        $returnType = $method->getReturnType();
+
+        return $returnType instanceof \ReflectionNamedType && is_a($returnType->getName(), Relation::class, true);
     }
 
     /**
