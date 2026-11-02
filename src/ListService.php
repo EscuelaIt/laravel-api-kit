@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace EscuelaIT\APIKit;
 
+use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class ListService
@@ -35,6 +39,7 @@ class ListService
         'belongsTo' => null,
         'relationId' => null,
     ];
+    protected ?string $requiredScope = null;
 
     public function setListModel(string $modelClass): ListService
     {
@@ -99,8 +104,16 @@ class ListService
         return $this;
     }
 
+    public function setRequiredScope(?string $scopeName): ListService
+    {
+        $this->requiredScope = $scopeName;
+
+        return $this;
+    }
+
     public function getResults()
     {
+        $this->validateRequiredScope();
         $this->validateListResource();
         $this->buildListQuery();
         if ($this->paginated) {
@@ -126,6 +139,7 @@ class ListService
 
     public function getAllIds()
     {
+        $this->validateRequiredScope();
         $this->buildListQuery();
 
         $query = $this->query;
@@ -156,6 +170,49 @@ class ListService
         return $this;
     }
 
+    /**
+     * Wraps a plain Collection of models (result of getResults() with paginated=false)
+     * into a Resource collection. The Resource collection is returned unresolved,
+     * the same way models are returned unserialized today.
+     */
+    public function wrapCollection(Collection $items, string $resourceClass): AnonymousResourceCollection
+    {
+        $this->validateResourceClass($resourceClass);
+
+        return $resourceClass::collection($items);
+    }
+
+    /**
+     * Wraps the paginated array returned by getResults() (['countItems' => ..., 'result' => Paginator])
+     * preserving pagination metadata.
+     */
+    public function wrapPaginated(array $results, string $resourceClass): array
+    {
+        $this->validateResourceClass($resourceClass);
+
+        $results['result'] = $results['result']->through(
+            fn ($item) => new $resourceClass($item)
+        );
+
+        return $results;
+    }
+
+    /**
+     * Wraps a single model (result of findIncluding()). Passes through null untouched.
+     *
+     * @param mixed $model
+     */
+    public function wrapModel($model, string $resourceClass)
+    {
+        if (null === $model) {
+            return null;
+        }
+
+        $this->validateResourceClass($resourceClass);
+
+        return new $resourceClass($model);
+    }
+
     protected function createQuery()
     {
         if (empty($this->listModel)) {
@@ -163,6 +220,17 @@ class ListService
         }
 
         return $this->listModel::query();
+    }
+
+    protected function validateRequiredScope(): void
+    {
+        if (null === $this->requiredScope) {
+            return;
+        }
+
+        if ($this->searchConfiguration['belongsTo'] !== $this->requiredScope) {
+            throw new MissingRequiredScopeException($this->requiredScope);
+        }
     }
 
     protected function applyKeywordFilter(?string $keyword): void
@@ -341,14 +409,23 @@ class ListService
             return;
         }
 
-        if (!is_a($this->listResource, JsonResource::class, true) || is_a($this->listResource, ResourceCollection::class, true)) {
-            throw new \InvalidArgumentException('List resource must extend JsonResource and cannot be a ResourceCollection');
+        $this->validateResourceClass($this->listResource);
+
+        if (is_a($this->listResource, ResourceCollection::class, true)) {
+            throw new InvalidResourceClassException($this->listResource);
         }
     }
 
     private function toResource($model): JsonResource
     {
         return new $this->listResource($model);
+    }
+
+    private function validateResourceClass(string $resourceClass): void
+    {
+        if (!is_subclass_of($resourceClass, JsonResource::class)) {
+            throw new InvalidResourceClassException($resourceClass);
+        }
     }
 
     private function getPaginatedResults()

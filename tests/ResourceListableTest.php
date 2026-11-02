@@ -6,8 +6,8 @@ namespace EscuelaIT\Test;
 
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\APIKit\ResourceListable;
+use EscuelaIT\Test\Fixtures\LocalizedPostResource;
 use EscuelaIT\Test\Fixtures\Post;
-use EscuelaIT\Test\Fixtures\PostResource;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Negartarh\APIWrapper\Facades\APIResponse;
@@ -280,7 +280,7 @@ class ResourceListableTest extends TestCase
         Post::factory()->create(['title' => 'Post 1', 'created_at' => '2026-01-15 10:00:00']);
         Post::factory()->count(2)->create();
 
-        $service = (new ListService())->setListModel(Post::class)->setListResource(PostResource::class);
+        $service = (new ListService())->setListModel(Post::class)->setListResource(LocalizedPostResource::class);
 
         $json = json_decode($this->resourceControllerClass->list($service)->getContent(), true);
 
@@ -305,7 +305,7 @@ class ResourceListableTest extends TestCase
 
         $service = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->setPaginated(false)
         ;
 
@@ -323,7 +323,7 @@ class ResourceListableTest extends TestCase
         $this->app->instance('request', Request::create('/posts/1', 'GET'));
         $post = Post::factory()->create(['title' => 'Post 1']);
 
-        $service = (new ListService())->setListModel(Post::class)->setListResource(PostResource::class);
+        $service = (new ListService())->setListModel(Post::class)->setListResource(LocalizedPostResource::class);
 
         $json = json_decode($this->resourceControllerClass->findIncluding($post->id, $service)->getContent(), true);
 

@@ -41,3 +41,4 @@ To execute all actions for a resource, we use a single controller that must use 
 - **Keyword Filtering**: Implement `applyKeywordFilter()` in your ListService for user searches
 - **Model Scopes**: Use model scopes for complex filtering logic instead of inline queries in the service
 - **Filter Columns**: Explicitly list columns that can be filtered to prevent unintended data exposure
+- **Resource Wrapping**: Use `wrapCollection()`/`wrapPaginated()`/`wrapModel()` to reuse an existing `JsonResource` across HTTP controllers, console commands, jobs, or MCP tools instead of re-implementing the model-to-array mapping for each consumer

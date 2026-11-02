@@ -11,9 +11,8 @@ class PostResource extends JsonResource
     public function toArray($request): array
     {
         return [
+            'id' => $this->id,
             'title' => $this->title,
-            'created_at_es' => $this->created_at->locale('es')->isoFormat('LL'),
-            'created_at_en' => $this->created_at->locale('en')->isoFormat('LL'),
         ];
     }
 }

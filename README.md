@@ -260,7 +260,7 @@ The resource is applied to each item returned by the `list()` and `findIncluding
 }
 ```
 
-The class must extend `JsonResource`. Any other class, including a `ResourceCollection`, throws an `InvalidArgumentException`.
+The class must extend `JsonResource`. Any other class, including a `ResourceCollection`, throws an `InvalidResourceClassException`.
 
 Keep these points in mind when using a resource:
 
@@ -312,6 +312,43 @@ Inside a resource’s `ListService`, several properties can be configured to cus
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
 - **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the ids() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
+- **`$requiredScope`** Requires a specific scope to be provided in every listing query. When set to a scope name, the `belongsTo` parameter must match this scope exactly, otherwise a `MissingRequiredScopeException` will be thrown with a 403 Forbidden response. This is useful when a listing should always be scoped to a specific context (e.g., items always belonging to a team or user). The default value is `null`, meaning no scope requirement is enforced. For security reasons, this is recommended when building APIs where certain resources should never be accessed without a specific scope applied. Usage example:
+  ```php
+  protected ?string $requiredScope = 'byTeam';
+  
+  // Or using the setter method:
+  $service->setRequiredScope('byTeam');
+  ```
+  When `$requiredScope` is set to `'byTeam'`, every listing request must include `belongsTo=byTeam` in the QueryString, or an exception will be thrown.
+
+### Wrapping Results in a JsonResource
+
+`getResults()` and `findIncluding()` always return raw Eloquent models (or, when paginated, a paginator of models) — this never changes based on configuration. If you want the same output shape your HTTP API already returns (e.g. reusing `InvoiceResource` from a console command, a queued job, or an MCP tool), `ListService` provides three explicit helper methods to wrap results into a `Illuminate\Http\Resources\Json\JsonResource` **after** fetching them:
+
+- **`wrapCollection(Collection $items, string $resourceClass)`** Wraps a plain `Collection` (result of `getResults()` with `$paginated = false`) into a `$resourceClass::collection(...)` call.
+- **`wrapPaginated(array $results, string $resourceClass)`** Wraps the paginated array returned by `getResults()` (`['countItems' => ..., 'result' => $paginator]`), preserving pagination metadata via `AbstractPaginator::through()`.
+- **`wrapModel($model, string $resourceClass)`** Wraps a single model (result of `findIncluding()`). If `$model` is `null` (not found), it's returned untouched.
+
+```php
+$service = new InvoiceListService();
+
+// Paginated listing
+$results = $service->getResults();
+$results = $service->wrapPaginated($results, InvoiceResource::class);
+
+// Non-paginated listing
+$service->setPaginated(false);
+$items = $service->getResults();
+$items = $service->wrapCollection($items, InvoiceResource::class);
+
+// Single item
+$model = $service->findIncluding($id);
+$resource = $service->wrapModel($model, InvoiceResource::class);
+```
+
+The resources are returned **unresolved** (no `->resolve()`/`->toArray()` call happens inside `ListService`), the same way models are returned unserialized today — resolving them to a response is left to the consumer (a controller returning them from an action, or an explicit `->resolve()` call elsewhere).
+
+If `$resourceClass` doesn't extend `Illuminate\Http\Resources\Json\JsonResource`, an `InvalidResourceClassException` is thrown immediately.
 
 ### QueryString Configurations for Listing Operations
 
@@ -674,6 +711,61 @@ $results = $listService->getResults();
 - This method provides a convenient alternative to `setSearchConfiguration()` when setting a single value
 - Null values are ignored and will not update the configuration
 - This method supports method chaining for a fluent API
+
+#### setRequiredScope
+
+Requires a specific scope to be provided in every listing query.
+
+**Description:**
+This method enforces that listing queries must include a specific scope (via the `belongsTo` QueryString parameter). If the required scope is not provided or doesn't match, a `MissingRequiredScopeException` is thrown. This is useful for APIs where certain resources should always be accessed within a specific context, such as items that always belong to a team or user.
+
+**Parameters:**
+- `?string $scopeName` - The name of the required scope. Pass `null` to disable the scope requirement.
+
+**Returns:**
+`ListService` - Returns the service instance for method chaining.
+
+**Exceptions:**
+- `MissingRequiredScopeException` - Thrown when `getResults()` is called and the required scope is not provided or doesn't match.
+
+**Example Usage:**
+```php
+class TeamInvoicesListService extends ListService
+{
+    protected string $listModel = Invoice::class;
+    protected ?string $requiredScope = 'byTeam';  // Property-based configuration
+}
+
+// Or using the setter method:
+$listService = new ListService();
+$listService->setListModel(Invoice::class)
+    ->setRequiredScope('byTeam')
+    ->setAvailableScopes(['byTeam', 'byUser'])
+    ->setSearchConfiguration([
+        'belongsTo' => 'byTeam',
+        'relationId' => 123,
+        'perPage' => 10,
+    ]);
+
+$results = $listService->getResults(); // Works - scope matches
+```
+
+If the scope doesn't match:
+```php
+$listService->setRequiredScope('byTeam')
+    ->setSearchConfiguration([
+        'belongsTo' => 'byUser',  // Different scope
+        'relationId' => 123,
+    ]);
+
+$results = $listService->getResults(); // Throws MissingRequiredScopeException
+```
+
+**Notes:**
+- The default value is `null`, which means no scope requirement is enforced (backward compatible)
+- Validation only occurs if a required scope is explicitly set
+- This feature works seamlessly with the `ResourceListable` trait - the scope should be passed via the `belongsTo` QueryString parameter
+- For security, it's recommended to combine this with `$availableScopes` to restrict which scopes can be applied
 
 ## Resource Actions
 

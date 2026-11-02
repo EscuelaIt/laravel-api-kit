@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace EscuelaIT\Test;
 
+use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\Test\Filters\TitleContainsFilter;
 use EscuelaIT\Test\Fixtures\Comment;
+use EscuelaIT\Test\Fixtures\LocalizedPostResource;
 use EscuelaIT\Test\Fixtures\Post;
-use EscuelaIT\Test\Fixtures\PostResource;
 use EscuelaIT\Test\Fixtures\PostWithTraitMethods;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -896,14 +898,14 @@ class ListServiceTest extends TestCase
 
         $results = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->setSearchConfigurationValue('perPage', 2)
             ->getResults()
         ;
 
         $this->assertEquals(3, $results['countItems']);
         $this->assertCount(2, $results['result']);
-        $this->assertInstanceOf(PostResource::class, $results['result'][0]);
+        $this->assertInstanceOf(LocalizedPostResource::class, $results['result'][0]);
     }
 
     #[Test]
@@ -913,13 +915,13 @@ class ListServiceTest extends TestCase
 
         $results = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->setPaginated(false)
             ->getResults()
         ;
 
         $this->assertCount(3, $results);
-        $this->assertInstanceOf(PostResource::class, $results[0]);
+        $this->assertInstanceOf(LocalizedPostResource::class, $results[0]);
     }
 
     #[Test]
@@ -929,10 +931,10 @@ class ListServiceTest extends TestCase
 
         $service = new class extends ListService {
             protected string $listModel = Post::class;
-            protected ?string $listResource = PostResource::class;
+            protected ?string $listResource = LocalizedPostResource::class;
         };
 
-        $this->assertInstanceOf(PostResource::class, $service->getResults()['result'][0]);
+        $this->assertInstanceOf(LocalizedPostResource::class, $service->getResults()['result'][0]);
     }
 
     #[Test]
@@ -942,11 +944,11 @@ class ListServiceTest extends TestCase
 
         $element = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->findIncluding($post->id)
         ;
 
-        $this->assertInstanceOf(PostResource::class, $element);
+        $this->assertInstanceOf(LocalizedPostResource::class, $element);
         $this->assertTrue($post->is($element->resource));
     }
 
@@ -955,7 +957,7 @@ class ListServiceTest extends TestCase
     {
         $element = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->findIncluding(999)
         ;
 
@@ -969,7 +971,7 @@ class ListServiceTest extends TestCase
 
         $ids = (new ListService())
             ->setListModel(Post::class)
-            ->setListResource(PostResource::class)
+            ->setListResource(LocalizedPostResource::class)
             ->getAllIds()
         ;
 
@@ -991,7 +993,7 @@ class ListServiceTest extends TestCase
     #[DataProvider('invalidResourceClasses')]
     public function itThrowsExceptionWhenResourceClassIsNotValid(string $resourceClass): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidResourceClassException::class);
 
         // DB vacía: el error de configuración se detecta aunque no haya registros
         (new ListService())
@@ -1008,5 +1010,124 @@ class ListServiceTest extends TestCase
             'resource collection' => [ResourceCollection::class],
             'unknown class' => ['App\Http\Resources\Unknown'],
         ];
+    }
+
+    #[Test]
+    public function itThrowsExceptionGettingAllIdsWhenRequiredScopeIsMissing(): void
+    {
+        $this->expectException(MissingRequiredScopeException::class);
+
+        (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->getAllIds()
+        ;
+    }
+
+    #[Test]
+    public function itThrowsExceptionWhenRequiredScopeIsMissing(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                // Note: No 'belongsTo' set
+            ])
+        ;
+
+        // Assert
+        $this->expectException(MissingRequiredScopeException::class);
+
+        // Act
+        $service->getResults();
+    }
+
+    #[Test]
+    public function itThrowsExceptionWhenRequiredScopeDoesNotMatch(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                'belongsTo' => 'otherScope',  // Different scope
+                'relationId' => 2,
+            ])
+        ;
+
+        // Assert
+        $this->expectException(MissingRequiredScopeException::class);
+
+        // Act
+        $service->getResults();
+    }
+
+    #[Test]
+    public function itAppliesResultsWhenRequiredScopeIsProvided(): void
+    {
+        // Arrange
+        Post::factory()->create(['id' => 1, 'title' => 'Post 1']);
+        Post::factory()->create(['id' => 2, 'title' => 'Post 2']);
+        Post::factory()->create(['id' => 3, 'title' => 'Post 3']);
+        Post::factory()->create(['id' => 4, 'title' => 'Post 4']);
+        Post::factory()->create(['id' => 5, 'title' => 'Post 5']);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setRequiredScope('greaterThanId')
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                'belongsTo' => 'greaterThanId',
+                'relationId' => 2,
+            ])
+        ;
+
+        // Act
+        $results = $service->getResults();
+
+        // Assert
+        $this->assertEquals(3, $results['countItems']); // Posts 3, 4, 5
+        $this->assertCount(3, $results['result']);
+        $this->assertTrue(
+            $results['result']->every(fn ($post) => $post->id > 2)
+        );
+    }
+
+    #[Test]
+    public function itDoesNotValidateWhenRequiredScopeIsNull(): void
+    {
+        // Arrange
+        Post::factory()->count(5)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            // Note: No setRequiredScope() call - defaults to null
+            ->setSearchConfiguration([
+                'perPage' => 10,
+                'sortField' => 'id',
+                'sortDirection' => 'asc',
+                // Note: No 'belongsTo' set
+            ])
+        ;
+
+        // Act
+        $results = $service->getResults();
+
+        // Assert - should not throw exception and return all results
+        $this->assertEquals(5, $results['countItems']);
+        $this->assertCount(5, $results['result']);
     }
 }
