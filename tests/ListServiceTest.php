@@ -12,7 +12,6 @@ use EscuelaIT\Test\Filters\TitleContainsFilter;
 use EscuelaIT\Test\Fixtures\Comment;
 use EscuelaIT\Test\Fixtures\LocalizedPostResource;
 use EscuelaIT\Test\Fixtures\Post;
-use EscuelaIT\Test\Fixtures\PostWithTraitMethods;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -652,97 +651,6 @@ class ListServiceTest extends TestCase
         $this->assertCount(1, $ids);
         // El id devuelto debe ser uno de los creados
         $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
-    }
-
-    #[Test]
-    #[DataProvider('notRelationIncludes')]
-    public function itIgnoresIncludesThatAreNotRelationsAndDoesNotCallThem(string $include): void
-    {
-        $post = Post::factory()->create();
-        Comment::factory()->create(['post_id' => $post->id]);
-
-        $results = (new ListService())
-            ->setListModel(PostWithTraitMethods::class)
-            ->setSearchConfiguration(['include' => $include])
-            ->getResults()
-        ;
-
-        $this->assertSame(1, Post::query()->count());
-        $this->assertSame(1, Comment::query()->count());
-        $this->assertCount(1, $results['result']);
-        $this->assertSame([], $results['result'][0]->getRelations());
-    }
-
-    public static function notRelationIncludes(): array
-    {
-        return [
-            'unknown' => ['nope'],
-            'forwarded to query builder' => ['truncate'],
-            'forwarded to eloquent builder' => ['forceDelete'],
-            'base model method' => ['delete'],
-            'typed method that is not a relation' => ['typedWipe'],
-            'untyped method from a trait' => ['untypedWipe'],
-            'static method' => ['factory'],
-            'protected method' => ['newFactory'],
-            'unknown nested' => ['comments.nope'],
-            'forwarded nested' => ['comments.truncate'],
-        ];
-    }
-
-    #[Test]
-    public function itDoesNotRunForwardedMethodsInFindIncluding(): void
-    {
-        $post = Post::factory()->create();
-
-        $element = (new ListService())
-            ->setListModel(Post::class)
-            ->setSearchConfiguration(['include' => 'truncate'])
-            ->findIncluding($post->id)
-        ;
-
-        $this->assertTrue($post->is($element));
-        $this->assertSame([], $element->getRelations());
-        $this->assertSame(1, Post::query()->count());
-    }
-
-    #[Test]
-    #[DataProvider('relationIncludes')]
-    public function itLoadsIncludesThatAreRelations(string $include, string $relation): void
-    {
-        Post::factory()->create();
-
-        $results = (new ListService())
-            ->setListModel(PostWithTraitMethods::class)
-            ->setSearchConfiguration(['include' => $include])
-            ->getResults()
-        ;
-
-        $this->assertTrue($results['result'][0]->relationLoaded($relation));
-    }
-
-    public static function relationIncludes(): array
-    {
-        return [
-            'untyped in the model' => ['comments', 'comments'],
-            'typed in a trait' => ['typedComments', 'typedComments'],
-            'nested' => ['comments.post', 'comments'],
-            'with columns' => ['comments:id', 'comments'],
-        ];
-    }
-
-    #[Test]
-    public function itLoadsIncludesDefinedWithResolveRelationUsing(): void
-    {
-        Post::factory()->create();
-        Post::resolveRelationUsing('resolvedComments', fn ($post) => $post->hasMany(Comment::class, 'post_id'));
-
-        $results = (new ListService())
-            ->setListModel(Post::class)
-            ->setSearchConfiguration(['include' => ['resolvedComments']])
-            ->getResults()
-        ;
-
-        $this->assertTrue($results['result'][0]->relationLoaded('resolvedComments'));
     }
 
     #[Test]

@@ -13,6 +13,16 @@ class PostWithTraitMethods extends Post
         return 'post_id';
     }
 
+    public function untypedOwnWipe()
+    {
+        return static::query()->delete();
+    }
+
+    public function untypedComments()
+    {
+        return $this->hasMany(Comment::class, 'post_id');
+    }
+
     public function typedWipe(): void
     {
         static::query()->delete();

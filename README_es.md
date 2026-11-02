@@ -291,7 +291,7 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Los nombres que no son relaciones se ignoran sin llamarlos. Cuando esta propiedad es `null`, solo se cargan los métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`); las relaciones sin tipo deben listarse en este array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
@@ -638,7 +638,7 @@ You can specify multiple relationships separated by commas. The data will be eag
 
 Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
 
-De manera predeterminada, `$availableIncludes` es `null`, lo que permite incluir cualquier relación mediante el QueryString. Los nombres que no son relaciones se ignoran. Un método público sin tipo de retorno declarado en el propio modelo no se puede distinguir de una relación sin llamarlo, así que declara el tipo de retorno de tus relaciones (por ejemplo, `: HasMany`) y de tus otros métodos públicos. Por seguridad y rendimiento, se recomienda definir de forma explícita qué relaciones se permiten:
+De manera predeterminada, `$availableIncludes` es `null`, lo que permite incluir cualquier relación mediante el QueryString. Solo se cargan los métodos con un tipo de retorno de relación declarado (por ejemplo, `: HasMany`), y lo demás se ignora sin llamarlo. Por seguridad y rendimiento, se recomienda definir de forma explícita qué relaciones se permiten:
 
 ```php
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];

@@ -297,7 +297,7 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```php
   protected ?array $availableScopes = ['byTeam', 'published'];
   ```
-- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
+- **`$availableIncludes`** Specifies which relationships are allowed to be included via the `include` QueryString parameter. The default value is `null`, allowing any relationship to be included. Names that are not relationships are ignored without being called. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded when this property is `null`; untyped relationships must be listed in this array. For security and performance reasons, it's recommended to explicitly restrict this array to only the relationships that should be loadable, e.g.:  
   ```php
   protected ?array $availableIncludes = ['comments', 'author', 'tags'];
   ```
@@ -649,7 +649,7 @@ You can specify multiple relationships separated by commas. The data will be eag
 
 Similar to `$availableFilterColumns` and `$availableScopes`, you can restrict which relationships are allowed to be included via the `include` parameter by setting the `$availableIncludes` property.
 
-By default, `$availableIncludes` is `null`, which means any relationship can be included via QueryString. Names that are not relationships are ignored. An untyped public method declared in the model itself can't be told apart from a relationship without calling it, so declare the return type of your relationships (e.g. `: HasMany`) and of your other public methods. For security and performance reasons, it's recommended to explicitly define which relationships are allowed:
+By default, `$availableIncludes` is `null`, which means any relationship can be included via QueryString. Only methods with a declared relationship return type (e.g. `: HasMany`) are loaded, and anything else is ignored without being called. For security and performance reasons, it's recommended to explicitly define which relationships are allowed:
 
 ```php
 protected ?array $availableIncludes = ['comments', 'author', 'tags'];

@@ -519,14 +519,11 @@ class ListService
             return false;
         }
 
+        // Only the declared return type is checked, because finding out what
+        // an untyped method returns would require running it.
         $returnType = $method->getReturnType();
-        if ($returnType instanceof \ReflectionNamedType) {
-            return is_a($returnType->getName(), Relation::class, true);
-        }
 
-        // Untyped methods are only trusted in the model itself. Those coming from
-        // traits, such as SoftDeletes::restore(), are not relations.
-        return null === $returnType && $method->getFileName() === $method->getDeclaringClass()->getFileName();
+        return $returnType instanceof \ReflectionNamedType && is_a($returnType->getName(), Relation::class, true);
     }
 
     /**
