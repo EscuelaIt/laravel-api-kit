@@ -189,11 +189,96 @@ With the default configuration, calling the controller’s method will return a 
 }
 ```
 
+### Transforming Items with a Laravel Resource
+
+By default, items are returned with all the visible attributes of the model. To control the output, assign a Laravel `JsonResource` class to the `$listResource` property of your `ListService`. For example, this resource hides the `id` and returns dates in Spanish and English:
+
+```php
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class UserResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'uuid' => $this->uuid,
+            'name' => $this->name,
+            'created_at_es' => $this->created_at->locale('es')->isoFormat('LL'),
+            'created_at_en' => $this->created_at->locale('en')->isoFormat('LL'),
+        ];
+    }
+}
+```
+
+```php
+class UserListService extends ListService
+{
+    protected string $listModel = User::class;
+    protected ?string $listResource = UserResource::class;
+}
+```
+
+You can also configure it using the `setListResource()` method:
+
+```php
+$service->setListResource(UserResource::class);
+```
+
+The resource is applied to each item returned by the `list()` and `findIncluding()` methods of the `ResourceListable` trait. Only the content of each item changes: `countItems`, `result` and the pagination keys stay the same.
+
+```json
+{
+  "status": 200,
+  "message": "1 items found",
+  "data": {
+    "countItems": 1,
+    "result": {
+      "current_page": 1,
+      "current_page_url": "http:\/\/localhost\/api\/users?page=1",
+      "data": [
+        {
+          "uuid": "9d1f6a52-3c1e-4c7a-8a55-0f2b7e3d1a10",
+          "name": "Sabrina Lubowitz",
+          "created_at_es": "15 de enero de 2026",
+          "created_at_en": "January 15, 2026"
+        }
+      ],
+      "first_page_url": "http:\/\/localhost\/api\/users?page=1",
+      "from": 1,
+      "next_page_url": null,
+      "path": "http:\/\/localhost\/api\/users",
+      "per_page": 10,
+      "prev_page_url": null,
+      "to": 1
+    }
+  },
+  "errors": [],
+  "execution": "64ms",
+  "version": "1"
+}
+```
+
+The class must extend `JsonResource`. Any other class, including a `ResourceCollection`, throws an `InvalidArgumentException`.
+
+Keep these points in mind when using a resource:
+
+- **Hiding the `id`:** removing it from the resource does not hide it everywhere.
+  - `allIds()` does not use the resource and returns the values of `$identifierField`, so set that property to another field, such as `uuid`.
+  - Clients can still use `sortField=id`, and can filter by `id` unless `$availableFilterColumns` excludes it.
+- **`include`:** requested relationships only appear in the output if the resource returns them. Use `whenLoaded()`, ideally with a resource for the relationship. If you use `parent::toArray($request)`, loaded relationships are serialized in full, including their ids and foreign keys:
+  ```php
+  'comments' => CommentResource::collection($this->whenLoaded('comments')),
+  ```
+- **Performance:** accessing a relationship that is not loaded runs one extra query per item. Load it with `with()` in `createQuery()`, or use `whenLoaded()`.
+
 ### ListService Configuration via Properties
 
 Inside a resource’s `ListService`, several properties can be configured to customize how listings behave:
 
 - **`$listModel`** Defines the model class used for the listing.  
+- **`$listResource`** Defines the Laravel `JsonResource` class applied to each returned item. The default value is `null`, meaning the models are returned as they are. See [Transforming Items with a Laravel Resource](#transforming-items-with-a-laravel-resource).
 - **`$identifierField`** The database table field to identify resource items, default is 'id'.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  

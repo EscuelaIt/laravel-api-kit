@@ -183,11 +183,96 @@ Con la configuración predeterminada, al invocar el método del controlador se o
 }
 ```
 
+### Transformar los elementos con un resource de Laravel
+
+De manera predeterminada, los elementos se devuelven con todos los atributos visibles del modelo. Para controlar la salida, asigna una clase `JsonResource` de Laravel a la propiedad `$listResource` de tu `ListService`. Por ejemplo, este resource oculta el `id` y devuelve las fechas en español e inglés:
+
+```php
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class UserResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'uuid' => $this->uuid,
+            'name' => $this->name,
+            'created_at_es' => $this->created_at->locale('es')->isoFormat('LL'),
+            'created_at_en' => $this->created_at->locale('en')->isoFormat('LL'),
+        ];
+    }
+}
+```
+
+```php
+class UserListService extends ListService
+{
+    protected string $listModel = User::class;
+    protected ?string $listResource = UserResource::class;
+}
+```
+
+También se puede configurar con el método `setListResource()`:
+
+```php
+$service->setListResource(UserResource::class);
+```
+
+El resource se aplica a cada elemento que devuelven los métodos `list()` y `findIncluding()` del trait `ResourceListable`. Solo cambia el contenido de cada elemento: `countItems`, `result` y las claves de paginación se mantienen.
+
+```json
+{
+  "status": 200,
+  "message": "1 items found",
+  "data": {
+    "countItems": 1,
+    "result": {
+      "current_page": 1,
+      "current_page_url": "http:\/\/localhost\/api\/users?page=1",
+      "data": [
+        {
+          "uuid": "9d1f6a52-3c1e-4c7a-8a55-0f2b7e3d1a10",
+          "name": "Sabrina Lubowitz",
+          "created_at_es": "15 de enero de 2026",
+          "created_at_en": "January 15, 2026"
+        }
+      ],
+      "first_page_url": "http:\/\/localhost\/api\/users?page=1",
+      "from": 1,
+      "next_page_url": null,
+      "path": "http:\/\/localhost\/api\/users",
+      "per_page": 10,
+      "prev_page_url": null,
+      "to": 1
+    }
+  },
+  "errors": [],
+  "execution": "64ms",
+  "version": "1"
+}
+```
+
+La clase debe heredar de `JsonResource`. Cualquier otra clase, incluida una `ResourceCollection`, lanza una `InvalidArgumentException`.
+
+Ten en cuenta estos puntos al usar un resource:
+
+- **Ocultar el `id`:** quitarlo del resource no lo oculta en todas partes.
+  - `allIds()` no usa el resource y devuelve los valores de `$identifierField`, así que configura esa propiedad con otro campo, como `uuid`.
+  - Los clientes aún pueden usar `sortField=id`, y filtrar por `id` salvo que `$availableFilterColumns` lo excluya.
+- **`include`:** las relaciones solicitadas solo aparecen en la salida si el resource las devuelve. Usa `whenLoaded()`, idealmente con un resource para la relación. Si usas `parent::toArray($request)`, las relaciones cargadas se serializan completas, incluidos sus ids y claves foráneas:
+  ```php
+  'comments' => CommentResource::collection($this->whenLoaded('comments')),
+  ```
+- **Rendimiento:** acceder a una relación no cargada lanza una consulta extra por cada elemento. Cárgala con `with()` en `createQuery()`, o usa `whenLoaded()`.
+
 ### Configuraciones de ListService vía propiedades
 
 En el `ListService` del recurso se pueden configurar algunas propiedades para personalizar el comportamiento de los listados:
 
 - **`$listModel`**  Indica la clase del modelo que vamos a usar para los listados.  
+- **`$listResource`** Indica la clase `JsonResource` de Laravel que se aplica a cada elemento devuelto. El valor predeterminado es `null`, lo que significa que los modelos se devuelven tal cual. Consulta [Transformar los elementos con un resource de Laravel](#transformar-los-elementos-con-un-resource-de-laravel).
 - **`$identifierField`** El campo de la tabla que sirve para identificar los elementos del recurso. De manera predeterminada es 'id'.
 - **`$paginated`** Define si el resultado del recurso se enviará con o sin paginación. El valor predeterminado es true, lo que configura la paginación.
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any `per_page` request exceeding this value will be automatically capped to the configured maximum. This is useful for preventing performance issues from excessively large page requests, e.g.:  

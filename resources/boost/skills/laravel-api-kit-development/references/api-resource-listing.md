@@ -20,6 +20,7 @@ The minimum implementation needs to specify the model that the listing should us
 Inside a resource’s `ListService`, several properties can be configured to customize how listings behave:
 
 - **`$listModel`** Defines the model class used for the listing.  
+- **`$listResource`** Defines the Laravel `JsonResource` class applied to each item returned by `list()` and `findIncluding()`. The default value is `null`, meaning the models are returned as they are. See "Transforming items with a Laravel resource".
 - **`$identifierField`** The database table field to identify resource items, default is 'id'.
 - **`$paginated`** Determines whether the resource results should be paginated. The default value is `true`, meaning pagination is enabled.  
 - **`$maxPerPage`** Sets the maximum page size allowed for paginated results. The default value is `null`, meaning no limit is enforced. 
@@ -155,6 +156,37 @@ With the default configuration, calling the controller’s method will return a 
   "version": "1"
 }
 ```
+
+## Transforming items with a Laravel resource
+
+Set `$listResource` in the `ListService`, or call `setListResource()`, to format fields or hide them from the output. Only the content of each item changes: `countItems`, `result` and the pagination keys stay the same. The class must extend `JsonResource` and cannot be a `ResourceCollection`, otherwise an `InvalidArgumentException` is thrown.
+
+```php
+class UserResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'uuid' => $this->uuid,
+            'name' => $this->name,
+            'created_at_es' => $this->created_at->locale('es')->isoFormat('LL'),
+            'created_at_en' => $this->created_at->locale('en')->isoFormat('LL'),
+            'comments' => CommentResource::collection($this->whenLoaded('comments')),
+        ];
+    }
+}
+
+class UserListService extends ListService
+{
+    protected string $listModel = User::class;
+    protected ?string $listResource = UserResource::class;
+}
+```
+
+- `allIds()` does not use the resource and returns the values of `$identifierField`. To avoid exposing ids, set that property to another field, such as `uuid`.
+- Clients can still use `sortField=id`, and can filter by `id` unless `$availableFilterColumns` excludes it.
+- Use `whenLoaded()` for relationships. Requested includes do not appear if the resource omits them, and `parent::toArray($request)` serializes them in full, including ids and foreign keys.
+- Accessing a relationship that is not loaded runs one extra query per item. Load it with `with()` in `createQuery()`, or use `whenLoaded()`.
 
 ## Supporting advanced `ListService` functionalities.
 

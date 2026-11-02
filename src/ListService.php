@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace EscuelaIT\APIKit;
 
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 
 class ListService
 {
     protected string $listModel;
+    protected ?string $listResource = null;
     protected string $identifierField = 'id';
     protected $query;
     protected bool $paginated = true;
@@ -33,6 +36,13 @@ class ListService
     public function setListModel(string $modelClass): ListService
     {
         $this->listModel = $modelClass;
+
+        return $this;
+    }
+
+    public function setListResource(?string $resourceClass): ListService
+    {
+        $this->listResource = $resourceClass;
 
         return $this;
     }
@@ -81,35 +91,32 @@ class ListService
 
     public function getResults()
     {
-        $this->query = $this->createQuery();
-        $this->applyKeywordFilter($this->searchConfiguration['keyword']);
-        $this->normalizeFilters();
-        $this->normalizeIncludes();
-        $this->applyCustomFilters();
-        $this->applySearchFilters();
-        $this->applyBelongsTo();
-        $this->applyIncludes();
-        $this->applyOrder();
+        $this->validateListResource();
+        $this->buildListQuery();
         if ($this->paginated) {
             return $this->getPaginatedResults();
         }
 
-        return $this->query->get();
+        $results = $this->query->get();
+
+        return $this->listResource ? $results->map(fn ($model) => $this->toResource($model)) : $results;
     }
 
     public function findIncluding($identifier)
     {
+        $this->validateListResource();
         $this->query = $this->createQuery();
         $this->normalizeIncludes();
         $this->applyIncludes();
 
-        return $this->query->where($this->identifierField, $identifier)->first();
+        $element = $this->query->where($this->identifierField, $identifier)->first();
+
+        return $element && $this->listResource ? $this->toResource($element) : $element;
     }
 
     public function getAllIds()
     {
-        $this->paginated = false;
-        $this->getResults();
+        $this->buildListQuery();
 
         $query = $this->query;
         if (null !== $this->maxIds) {
@@ -291,6 +298,35 @@ class ListService
         }
     }
 
+    private function buildListQuery(): void
+    {
+        $this->query = $this->createQuery();
+        $this->applyKeywordFilter($this->searchConfiguration['keyword']);
+        $this->normalizeFilters();
+        $this->normalizeIncludes();
+        $this->applyCustomFilters();
+        $this->applySearchFilters();
+        $this->applyBelongsTo();
+        $this->applyIncludes();
+        $this->applyOrder();
+    }
+
+    private function validateListResource(): void
+    {
+        if (null === $this->listResource) {
+            return;
+        }
+
+        if (!is_a($this->listResource, JsonResource::class, true) || is_a($this->listResource, ResourceCollection::class, true)) {
+            throw new \InvalidArgumentException('List resource must extend JsonResource and cannot be a ResourceCollection');
+        }
+    }
+
+    private function toResource($model): JsonResource
+    {
+        return new $this->listResource($model);
+    }
+
     private function getPaginatedResults()
     {
         $perPage = $this->searchConfiguration['perPage'];
@@ -301,6 +337,10 @@ class ListService
 
         $countItems = $this->query->count();
         $paginatedResults = $this->query->simplePaginate($perPage)->withQueryString();
+
+        if ($this->listResource) {
+            $paginatedResults->through(fn ($model) => $this->toResource($model));
+        }
 
         return [
             'countItems' => $countItems,

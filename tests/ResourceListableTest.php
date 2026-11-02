@@ -6,6 +6,8 @@ namespace EscuelaIT\Test;
 
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\APIKit\ResourceListable;
+use EscuelaIT\Test\Fixtures\Post;
+use EscuelaIT\Test\Fixtures\PostResource;
 use Illuminate\Http\Request;
 use Negartarh\APIWrapper\Facades\APIResponse;
 use PHPUnit\Framework\Attributes\Test;
@@ -214,5 +216,63 @@ class ResourceListableTest extends TestCase
         APIResponse::shouldNotReceive('ok');
 
         $this->resourceControllerClass->findIncluding($identifier, $service);
+    }
+
+    #[Test]
+    public function itSerializesPaginatedListWithResourceKeepingPaginationKeys(): void
+    {
+        $this->app->instance('request', Request::create('/posts?per_page=2', 'GET'));
+        Post::factory()->create(['title' => 'Post 1', 'created_at' => '2026-01-15 10:00:00']);
+        Post::factory()->count(2)->create();
+
+        $service = (new ListService())->setListModel(Post::class)->setListResource(PostResource::class);
+
+        $json = json_decode($this->resourceControllerClass->list($service)->getContent(), true);
+
+        $this->assertSame('3 items found', $json['message']);
+        $this->assertSame(3, $json['data']['countItems']);
+        $this->assertSame(1, $json['data']['result']['current_page']);
+        $this->assertEquals(2, $json['data']['result']['per_page']);
+        $this->assertNotNull($json['data']['result']['next_page_url']);
+        $this->assertCount(2, $json['data']['result']['data']);
+        $this->assertSame([
+            'title' => 'Post 1',
+            'created_at_es' => '15 de enero de 2026',
+            'created_at_en' => 'January 15, 2026',
+        ], $json['data']['result']['data'][0]);
+    }
+
+    #[Test]
+    public function itSerializesNotPaginatedListWithResource(): void
+    {
+        $this->app->instance('request', Request::create('/posts', 'GET'));
+        Post::factory()->count(2)->create();
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->setPaginated(false)
+        ;
+
+        $json = json_decode($this->resourceControllerClass->list($service)->getContent(), true);
+
+        $this->assertSame('2 items found', $json['message']);
+        $this->assertCount(2, $json['data']);
+        $this->assertArrayNotHasKey('id', $json['data'][0]);
+        $this->assertArrayHasKey('title', $json['data'][0]);
+    }
+
+    #[Test]
+    public function itSerializesFoundElementWithResource(): void
+    {
+        $this->app->instance('request', Request::create('/posts/1', 'GET'));
+        $post = Post::factory()->create(['title' => 'Post 1']);
+
+        $service = (new ListService())->setListModel(Post::class)->setListResource(PostResource::class);
+
+        $json = json_decode($this->resourceControllerClass->findIncluding($post->id, $service)->getContent(), true);
+
+        $this->assertSame('Post 1', $json['data']['title']);
+        $this->assertArrayNotHasKey('id', $json['data']);
     }
 }

@@ -9,6 +9,9 @@ use EscuelaIT\APIKit\ListService;
 use EscuelaIT\Test\Filters\TitleContainsFilter;
 use EscuelaIT\Test\Fixtures\Comment;
 use EscuelaIT\Test\Fixtures\Post;
+use EscuelaIT\Test\Fixtures\PostResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
@@ -646,5 +649,136 @@ class ListServiceTest extends TestCase
         $this->assertCount(1, $ids);
         // El id devuelto debe ser uno de los creados
         $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
+    }
+
+    #[Test]
+    public function itDoesNotWrapResultsWhenNoResourceIsConfigured(): void
+    {
+        Post::factory()->create();
+
+        $results = (new ListService())->setListModel(Post::class)->getResults();
+
+        $this->assertInstanceOf(Post::class, $results['result'][0]);
+    }
+
+    #[Test]
+    public function itAppliesResourceToPaginatedResults(): void
+    {
+        Post::factory()->count(3)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->setSearchConfigurationValue('perPage', 2)
+            ->getResults()
+        ;
+
+        $this->assertEquals(3, $results['countItems']);
+        $this->assertCount(2, $results['result']);
+        $this->assertInstanceOf(PostResource::class, $results['result'][0]);
+    }
+
+    #[Test]
+    public function itAppliesResourceToNotPaginatedResults(): void
+    {
+        Post::factory()->count(3)->create();
+
+        $results = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->setPaginated(false)
+            ->getResults()
+        ;
+
+        $this->assertCount(3, $results);
+        $this->assertInstanceOf(PostResource::class, $results[0]);
+    }
+
+    #[Test]
+    public function itAppliesResourceConfiguredViaProperty(): void
+    {
+        Post::factory()->create();
+
+        $service = new class extends ListService {
+            protected string $listModel = Post::class;
+            protected ?string $listResource = PostResource::class;
+        };
+
+        $this->assertInstanceOf(PostResource::class, $service->getResults()['result'][0]);
+    }
+
+    #[Test]
+    public function itAppliesResourceToFindIncluding(): void
+    {
+        $post = Post::factory()->create();
+
+        $element = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->findIncluding($post->id)
+        ;
+
+        $this->assertInstanceOf(PostResource::class, $element);
+        $this->assertTrue($post->is($element->resource));
+    }
+
+    #[Test]
+    public function itReturnsNullFromFindIncludingWhenElementDoesNotExistWithResource(): void
+    {
+        $element = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->findIncluding(999)
+        ;
+
+        $this->assertNull($element);
+    }
+
+    #[Test]
+    public function itReturnsPlainIdsWhenResourceIsConfigured(): void
+    {
+        $post = Post::factory()->create();
+
+        $ids = (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource(PostResource::class)
+            ->getAllIds()
+        ;
+
+        $this->assertSame([$post->id], $ids->all());
+    }
+
+    #[Test]
+    public function itKeepsPaginationSettingAfterGettingAllIds(): void
+    {
+        Post::factory()->create();
+
+        $service = (new ListService())->setListModel(Post::class);
+        $service->getAllIds();
+
+        $this->assertArrayHasKey('countItems', $service->getResults());
+    }
+
+    #[Test]
+    #[DataProvider('invalidResourceClasses')]
+    public function itThrowsExceptionWhenResourceClassIsNotValid(string $resourceClass): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        // DB vacía: el error de configuración se detecta aunque no haya registros
+        (new ListService())
+            ->setListModel(Post::class)
+            ->setListResource($resourceClass)
+            ->getResults()
+        ;
+    }
+
+    public static function invalidResourceClasses(): array
+    {
+        return [
+            'not a resource' => [Post::class],
+            'resource collection' => [ResourceCollection::class],
+            'unknown class' => ['App\Http\Resources\Unknown'],
+        ];
     }
 }
