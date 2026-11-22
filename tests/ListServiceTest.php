@@ -7,6 +7,7 @@ namespace EscuelaIT\Test;
 use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
 use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
+use EscuelaIT\APIKit\Exceptions\TooManyIdsException;
 use EscuelaIT\APIKit\ListService;
 use EscuelaIT\Test\Filters\TitleContainsFilter;
 use EscuelaIT\Test\Fixtures\Comment;
@@ -637,7 +638,7 @@ class ListServiceTest extends TestCase
     }
 
     #[Test]
-    public function itLimitsIdsToMaxIds(): void
+    public function itLimitsIdsToMaxIdsWhenTruncationIsEnabled(): void
     {
         // Arrange: crear posts
         $post1 = Post::factory()->create(['title' => 'Post 1', 'status' => 'published']);
@@ -647,6 +648,7 @@ class ListServiceTest extends TestCase
         $service = (new ListService())
             ->setListModel(Post::class)
             ->setMaxIds(1)
+            ->setTruncateIds(true)
         ;
 
         // Act
@@ -656,6 +658,60 @@ class ListServiceTest extends TestCase
         $this->assertCount(1, $ids);
         // El id devuelto debe ser uno de los creados
         $this->assertContains($ids[0], [$post1->id, $post2->id, $post3->id]);
+    }
+
+    #[Test]
+    public function itThrowsInsteadOfTruncatingIdsOverMaxIds(): void
+    {
+        Post::factory()->count(3)->create(['status' => 'published']);
+
+        $service = (new ListService())->setListModel(Post::class)->setMaxIds(2);
+
+        try {
+            $service->getAllIds();
+            $this->fail('Expected TooManyIdsException');
+        } catch (TooManyIdsException $e) {
+            $this->assertSame(3, $e->count);
+            $this->assertSame(2, $e->maxIds);
+        }
+    }
+
+    #[Test]
+    public function itReturnsAllIdsWhenCountEqualsMaxIds(): void
+    {
+        Post::factory()->count(2)->create();
+
+        $service = (new ListService())->setListModel(Post::class)->setMaxIds(2);
+
+        $this->assertCount(2, $service->getAllIds());
+    }
+
+    #[Test]
+    public function itCountsOnlyFilteredItemsAgainstMaxIds(): void
+    {
+        Post::factory()->count(3)->create(['status' => 'draft']);
+        $published = Post::factory()->create(['status' => 'published']);
+
+        $service = (new ListService())
+            ->setListModel(Post::class)
+            ->setAvailableFilterColumns(['status'])
+            ->setMaxIds(1)
+            ->setSearchConfiguration(['filters' => [['name' => 'status', 'value' => 'published', 'active' => true]]])
+        ;
+
+        $this->assertSame([$published->id], $service->getAllIds()->all());
+    }
+
+    #[Test]
+    public function itIncludesMaxIdsInPaginatedResults(): void
+    {
+        Post::factory()->count(2)->create();
+
+        $results = (new ListService())->setListModel(Post::class)->setMaxIds(50)->getResults();
+        $this->assertSame(50, $results['maxIds']);
+
+        $results = (new ListService())->setListModel(Post::class)->setMaxIds(null)->getResults();
+        $this->assertNull($results['maxIds']);
     }
 
     #[Test]
@@ -680,6 +736,7 @@ class ListServiceTest extends TestCase
             ->setMaxPerPage(null)
             ->setMaxFilters(null)
             ->setMaxIds(null)
+            ->setTruncateIds(false)
             ->setRequiredScope(null)
             ->setSearchConfiguration([])
             ->setSearchConfigurationValue('keyword', null)

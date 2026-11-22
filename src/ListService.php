@@ -7,6 +7,7 @@ namespace EscuelaIT\APIKit;
 use EscuelaIT\APIKit\Exceptions\InvalidResourceClassException;
 use EscuelaIT\APIKit\Exceptions\ListModelNotDefinedException;
 use EscuelaIT\APIKit\Exceptions\MissingRequiredScopeException;
+use EscuelaIT\APIKit\Exceptions\TooManyIdsException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,6 +34,7 @@ class ListService
     protected ?int $maxPerPage = null;
     protected ?int $maxFilters = null;
     protected ?int $maxIds = 100;
+    protected bool $truncateIds = false;
     protected array $searchConfiguration = [
         'perPage' => 10,
         'sortField' => null,
@@ -130,6 +132,18 @@ class ListService
         return $this;
     }
 
+    public function setTruncateIds(bool $truncateIds): static
+    {
+        $this->truncateIds = $truncateIds;
+
+        return $this;
+    }
+
+    public function getMaxIds(): ?int
+    {
+        return $this->maxIds;
+    }
+
     public function setRequiredScope(?string $scopeName): static
     {
         $this->requiredScope = $scopeName;
@@ -174,6 +188,9 @@ class ListService
 
         $query = $this->query;
         if (null !== $this->maxIds) {
+            if (!$this->truncateIds) {
+                $this->ensureIdsWithinLimit();
+            }
             $query = $query->limit($this->maxIds);
         }
 
@@ -438,6 +455,19 @@ class ListService
         $this->applyOrder();
     }
 
+    /**
+     * A truncated list of ids would let clients apply batch actions to a subset
+     * of what the user selected without knowing it.
+     */
+    private function ensureIdsWithinLimit(): void
+    {
+        // Some databases, such as PostgreSQL, reject ORDER BY in a count query
+        $count = (clone $this->query)->reorder()->count();
+        if ($count > $this->maxIds) {
+            throw new TooManyIdsException($count, $this->maxIds);
+        }
+    }
+
     private function validateListResource(): void
     {
         if (null === $this->listResource) {
@@ -485,6 +515,7 @@ class ListService
         return [
             'countItems' => $countItems,
             'lastPage' => max(1, (int) ceil($countItems / $perPage)),
+            'maxIds' => $this->maxIds,
             'result' => $paginatedResults,
         ];
     }

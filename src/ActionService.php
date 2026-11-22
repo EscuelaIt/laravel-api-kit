@@ -26,16 +26,24 @@ class ActionService
         $this->actionData = $actionData;
         $this->user = $user;
         $this->query = $this->createQuery();
+
+        // Avoids querying a huge list of ids that would be rejected anyway
+        if (count(array_unique($actionData['relatedIds'])) > $this->maxModelsPerAction) {
+            return $this->tooManyModelsError();
+        }
+
         $this->queryModels();
 
         if ($this->query->count() > $this->maxModelsPerAction) {
-            return ActionResult::error(
-                [],
-                "The number of models to process exceeds the maximum allowed ({$this->maxModelsPerAction})."
-            );
+            return $this->tooManyModelsError();
         }
 
         return $this->getActionClass()->processAction();
+    }
+
+    public function getMaxModelsPerAction(): int
+    {
+        return $this->maxModelsPerAction;
     }
 
     public function queryModels()
@@ -50,6 +58,15 @@ class ActionService
         }
 
         return $this->actionModel::query();
+    }
+
+    protected function tooManyModelsError(): ActionResult
+    {
+        $message = __('The number of models to process exceeds the maximum allowed (:max).', [
+            'max' => $this->maxModelsPerAction,
+        ]);
+
+        return ActionResult::error(['relatedIds' => $message], $message);
     }
 
     private function getModels()

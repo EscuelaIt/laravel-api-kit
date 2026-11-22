@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Breaking changes
+
+- `ListService::getAllIds()` no longer returns only the first `$maxIds` ids when the query matches more items. It throws `TooManyIdsException`, and `ResourceListable::allIds()` responds 422 with `count` and `maxIds` in `errors`. A truncated list made clients apply batch actions to items other than the ones the user selected. Set `$truncateIds = true` or call `setTruncateIds(true)` to keep the previous behavior.
+
+### Added
+
+- `maxIds` in paginated listings, next to `countItems` and `lastPage`, so clients know whether they can request all the ids.
+- `$truncateIds`, `setTruncateIds()` and `getMaxIds()` in `ListService`.
+- `ActionService::getMaxModelsPerAction()`.
+
+### Changed
+
+- The error of `ActionService` when there are too many models goes through `__()`, so applications can translate it, and is also returned in `errors.relatedIds`.
+- `ActionService` rejects requests with more `relatedIds` than `$maxModelsPerAction` before querying the database.
+
 ## 2.1.0 - 2026-11-02
 
 ### Added

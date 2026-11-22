@@ -183,7 +183,7 @@ class ListServiceOrderAndPageSizeTest extends TestCase
         $post = Post::factory()->create(['title' => 'A']);
         $last = Post::factory()->create(['title' => 'B']);
 
-        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title', 'desc')->setMaxIds(1);
+        $service = (new ListService())->setListModel(Post::class)->setDefaultSort('title', 'desc')->setMaxIds(1)->setTruncateIds(true);
 
         $this->assertSame([$last->id], $service->getAllIds()->all());
         $this->assertNotSame($post->id, $last->id);
@@ -270,7 +270,7 @@ class ListServiceOrderAndPageSizeTest extends TestCase
             protected string $identifierField = 'title';
         };
 
-        $this->assertSame(['A'], $service->setMaxIds(1)->getAllIds()->all());
+        $this->assertSame(['A'], $service->setMaxIds(1)->setTruncateIds(true)->getAllIds()->all());
     }
 
     #[Test]

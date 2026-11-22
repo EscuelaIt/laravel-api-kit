@@ -279,6 +279,24 @@ class ResourceListableTest extends TestCase
     }
 
     #[Test]
+    public function itRespondsUnprocessableWhenAllIdsExceedMaxIds(): void
+    {
+        Post::factory()->count(3)->create();
+
+        Route::get('/posts/allids', fn () => $this->resourceControllerClass->allIds(
+            (new ListService())->setListModel(Post::class)->setMaxIds(2)
+        ));
+
+        $response = $this->getJson('/posts/allids');
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('status', 422);
+        $response->assertJsonPath('errors.count', 3);
+        $response->assertJsonPath('errors.maxIds', 2);
+        $response->assertJsonPath('message', 'The number of items (3) exceeds the maximum allowed (2).');
+    }
+
+    #[Test]
     public function itRespondsBadRequestWithMalformedScopeInFindIncluding(): void
     {
         $this->app->instance('request', Request::create('/posts/1?belongsTo=greaterThanId&relationId[]=2', 'GET'));

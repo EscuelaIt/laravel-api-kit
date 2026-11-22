@@ -149,6 +149,7 @@ Con la configuración predeterminada, al invocar el método del controlador se o
   "data": {
     "countItems": 3,
     "lastPage": 1,
+    "maxIds": 100,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -184,7 +185,7 @@ Con la configuración predeterminada, al invocar el método del controlador se o
 }
 ```
 
-`countItems` es el número total de elementos, y `lastPage` es el número de la última página, que es 1 cuando no hay elementos.
+`countItems` es el número total de elementos, y `lastPage` es el número de la última página, que es 1 cuando no hay elementos. `maxIds` es el valor de `$maxIds` (o `null`), para que el cliente sepa de antemano si puede pedir todos los identificadores del listado.
 
 ### Transformar los elementos con un resource de Laravel
 
@@ -232,6 +233,7 @@ El resource se aplica a cada elemento que devuelven los métodos `list()` y `fin
   "data": {
     "countItems": 1,
     "lastPage": 1,
+    "maxIds": 100,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -323,7 +325,8 @@ En el `ListService` del recurso se pueden configurar algunas propiedades para pe
   ```
 - **`$searchConfiguration`** Es un array de datos de configuración de la búsqueda en los listados que está pensado para personalizar de manera fina las búsquedas con múltiples parámetros. Esta propiedad en el `ListService` almacena inicialmente la configuración predeterminada y existe un método `setSearchConfiguration()` que permite enviarle una configuración personalizada para un listado en particular, que hace un merge de los datos predeterminados y los nuevos datos pasados al método.
 - **`$maxFilters`** Indica el número máximo de filtros permitidos por consulta. El valor predeterminado es `null`, lo que significa que no hay límite. Si se indica un entero positivo, los filtros que superen ese número se descartan sin lanzar un error.
-- **`$maxIds`** Indica el número máximo de identificadores que se devuelven al llamar al método `allIds()` del trait `ResourceListable`, para evitar devolver tantos elementos que puedan sobrecargar el sistema. El valor predeterminado es 100. Se puede asignar `null` para no tener límite.
+- **`$maxIds`** Indica el número máximo de identificadores que puede devolver `allIds()` del trait `ResourceListable`, para evitar devolver tantos elementos que puedan sobrecargar el sistema. El valor predeterminado es 100. Se puede asignar `null` para no tener límite. Si la consulta encuentra más elementos, `getAllIds()` lanza `TooManyIdsException` y `allIds()` responde 422 con `count` y `maxIds` en `errors`, en lugar de devolver solo parte de los identificadores. Los clientes suelen seleccionar todos para aplicar una acción en lote, y con una lista recortada la aplicarían a elementos distintos de los que eligió el usuario. Conviene darle el mismo valor que `$maxModelsPerAction` en el servicio de acciones del mismo recurso, para que seleccionar todos y aplicar la acción admitan el mismo número de elementos.
+- **`$truncateIds`** Con `true`, `getAllIds()` devuelve los primeros `$maxIds` identificadores en el orden del listado en lugar de lanzar la excepción, como antes de la 2.2. El valor predeterminado es `false`. También se puede asignar con `setTruncateIds()`.
 
 ### Envolver resultados en un JsonResource
 
@@ -888,7 +891,7 @@ protected array $actionTypes = [
 
 Permite decir cuál es el número máximo de elementos sobre los cuales se permite ejecutar una acción. 
 
-El valor predeterminado de esta propiedad es 100, de modo que si se solicita ejecutar una acción sobre más de 100 elementos se producirá un error de validación, enviando un código de respuesta HTTP 422 con un mensaje.
+El valor predeterminado de esta propiedad es 100, de modo que si se solicita ejecutar una acción sobre más de 100 elementos se producirá un error de validación, enviando un código de respuesta HTTP 422 con un mensaje, también en `errors.relatedIds`. El mensaje pasa por `__()`, así que la aplicación puede traducir `The number of models to process exceeds the maximum allowed (:max).` en sus archivos de idioma JSON. `getMaxModelsPerAction()` devuelve el valor.
 
 ```php
 protected int $maxModelsPerAction = 50;

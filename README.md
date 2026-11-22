@@ -155,6 +155,7 @@ With the default configuration, calling the controller’s method will return a 
   "data": {
     "countItems": 3,
     "lastPage": 1,
+    "maxIds": 100,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -190,7 +191,7 @@ With the default configuration, calling the controller’s method will return a 
 }
 ```
 
-`countItems` is the total number of items, and `lastPage` is the number of the last page, which is 1 when there are no items.
+`countItems` is the total number of items, and `lastPage` is the number of the last page, which is 1 when there are no items. `maxIds` is the value of `$maxIds` (or `null`), so clients know beforehand whether they can request all the ids of the listing.
 
 ### Transforming Items with a Laravel Resource
 
@@ -238,6 +239,7 @@ The resource is applied to each item returned by the `list()` and `findIncluding
   "data": {
     "countItems": 1,
     "lastPage": 1,
+    "maxIds": 100,
     "result": {
       "current_page": 1,
       "current_page_url": "http:\/\/localhost\/api\/users?page=1",
@@ -324,7 +326,8 @@ Inside a resource’s `ListService`, several properties can be configured to cus
   ```
 - **`$searchConfiguration`** Holds an array defining the search configuration for listings. This allows fine-grained customization of multi-parameter searches. The property stores the default configuration but can be overridden using the `setSearchConfiguration()` method, which merges new settings with the existing defaults to adapt searches for specific listings.
 - **`$maxFilters`** Sets the maximum number of filters allowed per query. The default value is `null`, meaning no limit is enforced. When set to a positive integer, any number of active filters exceeding this value will be automatically capped to the configured maximum without raising an error.
-- **`$maxIds`** Defines the maximum number of IDs that will be returned when calling the allIds() method of the ResourceListable trait, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit.
+- **`$maxIds`** Defines the maximum number of IDs that `allIds()` of the `ResourceListable` trait can return, preventing an excessive number of items from being returned that could overload the system. The default value is 100. It can be set to null, in which case there will be no limit. When the query matches more items, `getAllIds()` throws `TooManyIdsException` and `allIds()` responds 422 with `count` and `maxIds` in `errors`, instead of returning only part of the ids. Clients usually select all items to apply a batch action, so a truncated list would apply it to items other than the ones the user chose. Set it to the `$maxModelsPerAction` of the action service of the same resource, so selecting all and applying an action accept the same number of items.
+- **`$truncateIds`** With `true`, `getAllIds()` returns the first `$maxIds` ids in the order of the listing instead of throwing, as before 2.2. The default value is `false`. Can also be set with `setTruncateIds()`.
 - **`$requiredScope`** Requires a specific scope to be provided in every listing query. When set to a scope name, the `belongsTo` parameter must match this scope exactly, otherwise a `MissingRequiredScopeException` will be thrown with a 403 Forbidden response. This is useful when a listing should always be scoped to a specific context (e.g., items always belonging to a team or user). The default value is `null`, meaning no scope requirement is enforced. For security reasons, this is recommended when building APIs where certain resources should never be accessed without a specific scope applied. Usage example:
   ```php
   protected ?string $requiredScope = 'byTeam';
@@ -931,7 +934,7 @@ protected array $actionTypes = [
 
 Allows specifying the maximum number of elements on which an action is allowed to be executed.
 
-The default value of this property is 100, so if an action is requested to be executed on more than 100 elements, a validation error will occur, sending an HTTP 422 response code with a message.
+The default value of this property is 100, so if an action is requested to be executed on more than 100 elements, a validation error will occur, sending an HTTP 422 response code with a message, also in `errors.relatedIds`. The message goes through `__()`, so the application can translate `The number of models to process exceeds the maximum allowed (:max).` in its JSON language files. `getMaxModelsPerAction()` returns the value.
 
 ```php
 protected int $maxModelsPerAction = 50;

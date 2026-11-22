@@ -241,6 +241,37 @@ class ActionServiceTest extends TestCase
         // Assert
         $this->assertFalse($result->isSuccess());
         $this->assertEquals('The number of models to process exceeds the maximum allowed (5).', $result->getMessage());
+        $this->assertSame(['relatedIds' => ['The number of models to process exceeds the maximum allowed (5).']], $result->getErrors());
+    }
+
+    #[Test]
+    public function itCountsExistingModelsNotRequestedIds(): void
+    {
+        $posts = Post::factory()->count(2)->create();
+
+        $service = new class extends ActionService {
+            protected string $actionModel = Post::class;
+            protected int $maxModelsPerAction = 3;
+            protected array $actionTypes = [];
+
+            public function setActionType(string $name, string $class): void
+            {
+                $this->actionTypes[$name] = $class;
+            }
+        };
+
+        TestAction::setRules([]);
+        TestAction::setHandler(static fn (CrudAction $action): ActionResult => ActionResult::success('Done'));
+        $service->setActionType('testAction', TestAction::class);
+
+        $result = $service->processAction([
+            'type' => 'testAction',
+            'relatedIds' => [...$posts->pluck('id')->all(), $posts[0]->id, 9999],
+            'data' => [],
+        ], null);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame(3, $service->getMaxModelsPerAction());
     }
 
     #[Test]
